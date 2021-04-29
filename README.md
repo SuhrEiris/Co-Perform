@@ -1,6 +1,6 @@
 # Co-Perform
 
- ### Data and scripts to reproduce results from the "Biofilm co-evolution as a driver for enhanced trait selection in lactic acid bacteria; a case study on Lactococcus lactis subsp. lactis"
+Data and scripts to reproduce results from the "Biofilm co-evolution as a driver for enhanced trait selection in lactic acid bacteria; a case study on Lactococcus lactis subsp. lactis" submitted to XXX
 
  
  ## Software
