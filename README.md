@@ -9,5 +9,5 @@ Data and scripts to reproduce results from the "Biofilm co-evolution as a driver
  
  ## Preparation
  
- Install all packages in packages.R
+ Install all packages in packages.R. Download all data files. 
  
