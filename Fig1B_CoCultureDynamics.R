@@ -1,6 +1,6 @@
 
 # Load data (create CSV file etc)
-cfu <- read_excel("Data/df.evoexperimentCFU.xlsx")
+cfu <- read_excel("Data/df.beadexperimentCFU.xlsx")
 
 #Average technical replicates
 cfu_data.1 <- cfu %>% 
