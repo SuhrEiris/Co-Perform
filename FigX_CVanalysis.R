@@ -1,7 +1,5 @@
 ### CV analysis - day14 variants ###
 
-#Nathalie
-setwd("~/Dropbox/MME_Co-Adatpt/Experiments_2019/CV_day14variants_2021")
 dir()
 
 # packages
@@ -20,7 +18,7 @@ library("ggplot2")
 library("ggpubr")
 
 #load data
-cv_raw <- as.data.frame(read_excel("day14_CV_09052021.xlsx", sheet = 2))
+cv_raw <- as.data.frame(read_excel("Data/CV.xlsx", sheet = 2))
 str(cv_raw)
 
 #prepare data
