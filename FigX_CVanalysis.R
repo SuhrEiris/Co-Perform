@@ -1,21 +1,5 @@
 ### CV analysis - day14 variants ###
 
-dir()
-
-# packages
-library(devtools)
-#install_github("Russel88/COEF")
-library(COEF)
-#install.packages("readxl")
-library("readxl")
-#install.packages("dplyr")
-library("dplyr")
-#install.packages("tidyr")
-library("tidyr")
-#install.packages("stringr")
-library("stringr")
-library("ggplot2")
-library("ggpubr")
 
 #load data
 cv_raw <- as.data.frame(read_excel("Data/CV.xlsx", sheet = 2))
@@ -42,19 +26,25 @@ lal_b1 = biorep1[biorep1$isolate == "lal",]
 lal_b2 = biorep2[biorep2$isolate == "lal",]
 lal_b3 = biorep3[biorep3$isolate == "lal",]
 
-# log2 foldchange (n_cv/wildtype)
-biorep1$logfc_cv = log2(biorep1$n_cv/lal_b1$n_cv)
-biorep2$logfc_cv = log2(biorep2$n_cv/lal_b2$n_cv)
-biorep3$logfc_cv = log2(biorep3$n_cv/lal_b3$n_cv)
+# # log2 foldchange (n_cv/wildtype)
+# biorep1$logfc_cv = log2(biorep1$n_cv/lal_b1$n_cv)
+# biorep2$logfc_cv = log2(biorep2$n_cv/lal_b2$n_cv)
+# biorep3$logfc_cv = log2(biorep3$n_cv/lal_b3$n_cv)
 
-# #Background corrected logfc (gets NaNs as many bgcorrected values are negative, only 119 values (258 in total))
-# biorep1$logfc_cv = log2(biorep1$bgcorrect_cv/lal_b1$bgcorrect_cv)
-# biorep2$logfc_cv = log2(biorep2$bgcorrect_cv/lal_b2$bgcorrect_cv)
-# biorep3$logfc_cv = log2(biorep3$bgcorrect_cv/lal_b3$bgcorrect_cv)
+#Background corrected logfc (all bgcorrected CV values that are negative are set to zero) a pseudocount of one is added 
+biorep1$logfc_cv = log2((biorep1$n_bgcorrect_cv_adjneg+1)/(lal_b1$n_bgcorrect_cv_adjneg+1))
+biorep2$logfc_cv = log2((biorep2$n_bgcorrect_cv_adjneg+1)/(lal_b2$n_bgcorrect_cv_adjneg+1))
+biorep3$logfc_cv = log2((biorep3$n_bgcorrect_cv_adjneg+1)/(lal_b3$n_bgcorrect_cv_adjneg+1))
 
 # merge bioreps
 combined_cv = rbind(biorep1, biorep2, biorep3)
 combined_cv = na.omit(combined_cv)
+
+#Logfold change plot 
+ggplot(combined_cv, aes(x = isolate, y = logfc_cv,  fill = type)) +
+  geom_bar(stat = "identity")+
+  facet_grid(biorep~.) + 
+  theme_bw()
 
 # Average bioreps
 
@@ -69,10 +59,6 @@ av_bioreps = av_bioreps[av_bioreps$isolate != "lal",]
 # make binary for culture type and color
 av_bioreps$Col.bin <- ifelse(av_bioreps$color == "l",1,0)
 av_bioreps$Cult.bin <- ifelse(av_bioreps$type == "co",1,0) 
-
-# Mixed linear models
-library(lme4)
-library(nlme)
 
 lm <- lme(mean_logfc_cv ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=av_bioreps)
 lm2 <- lm(mean_logfc_cv ~ Cult.bin*Col.bin, data=av_bioreps)
@@ -107,7 +93,7 @@ df.cv2$Eff <- rownames(df.cv)
 df.cv2$plot <- "Plot2"
 names(df.cv2)
 
-# Dataframe for lineage:
+# Dataframe for lineage 
 lm.fit.cv.null <- lmer(mean_logfc_cv ~ Cult.bin*Col.bin + (1|lineage), data=av_bioreps, REML=FALSE)
 lm.fit.cv.model <- lm(mean_logfc_cv ~ Cult.bin*Col.bin , data=av_bioreps)
 linage <- anova(lm.fit.cv.null, lm.fit.cv.model)
@@ -119,19 +105,20 @@ linage2$plot <- "Plot2"
 
 # Unite the two data.frames 
 df.cv.all <- rbind(dfx.cv2, df.cv2,linage2)
+
+# FDR on all p-values
 df.cv.all$p.correct <- p.adjust(df.cv.all$pvalue, method = "fdr")
 
+#Order the variables for plotting
 df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin", "Linage"))
 
-
-p <- df.cv.all[df.cv.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
-  geom_point(size = 3)+
+#Figure
+df.cv.all[df.cv.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
+  geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
   theme_bw()+
-  geom_hline(yintercept = 0, color = "#798E87", size = 1)+
-  labs(title = "CV")+
-  #scale_y_continuous(limits = c(-0.55,1))+
+  geom_hline(yintercept = 0, color = "dodgerblue4", size = 0.8)+
+  labs(title = "CV analysis")+
   facet_grid(~plot, scale= "free_x", space = "free_x")
-p
 
 
