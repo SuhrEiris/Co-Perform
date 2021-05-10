@@ -7,7 +7,6 @@ lm.fit.t.gen <- lme(t.gen ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.om
 jakob.2 <- summary(lm.fit.t.gen)
 jakob <- intervals(lm.fit.t.gen)
 
-library(multcomp)
 contr <- rbind("COCvsInter"=c(1,1,0,0)) 
 test <- multcomp::glht(lm.fit.t.gen, linfct=contr)
 jakob1 <- confint(test)
@@ -36,8 +35,8 @@ df.t.gen2$plot <- "Plot2"
 names(df.t.gen2)
 
 # Dataframe for linage:
-lm.fit.t.gen.null <- lmer(t.gen ~ Cult.bin*Col.bin + (1|Lineage), data=data.select, REML=FALSE)
-lm.fit.t.gen.model <- lm(t.gen ~ Culture*Color , data=data.select)
+lm.fit.t.gen.null <- lmer(t.gen ~ Cult.bin*Col.bin + (1|Lineage), data=data.omit, REML=FALSE)
+lm.fit.t.gen.model <- lm(t.gen ~ Culture*Color , data=data.omit)
 linage <- anova(lm.fit.t.gen.null, lm.fit.t.gen.model)
 linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
 colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")

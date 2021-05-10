@@ -2,14 +2,10 @@
 #Load dataframe with culture yield values
 data.omit  <- readRDS("Data/df.phenotypicdata.rds")
 
-
-### ----- Test of variable k: #####
-library(lme4)
 lm.fit.k <- lme(k ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
 jakob.2 <- summary(lm.fit.k)
 jakob <- intervals(lm.fit.k)
 
-library(multcomp)
 contr <- rbind("COCvsInter"=c(1,1,0,0)) 
 test <- multcomp::glht(lm.fit.k, linfct=contr)
 jakob1 <- confint(test)

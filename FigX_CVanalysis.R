@@ -16,6 +16,27 @@ str(cv_raw)
 
 cv_clean = cv_raw[cv_raw$type !="unknown" & cv_raw$isolate != "medium" & cv_raw$isolate != "lem",]
 
+#plot
+
+ggplot(cv_clean, aes(x = type, y = bgcorrect_cv_adjposvalue, color = type)) +
+  geom_boxplot()
+
+# Testing (wilcoxon test)
+
+with(cv_clean, shapiro.test(bgcorrect_cv_adjposvalue[type == "co"]))
+hist(cv_clean[cv_clean$type == "co",]$bgcorrect_cv_adjposvalue)
+
+with(cv_clean, shapiro.test(bgcorrect_cv_adjposvalue[type == "wt"]))
+hist(cv_clean[cv_clean$type == "wt",]$bgcorrect_cv_adjposvalue)
+
+with(cv_clean, shapiro.test(bgcorrect_cv_adjposvalue[type == "mono"]))
+hist(cv_clean[cv_clean$type == "mono",]$bgcorrect_cv_adjposvalue)
+
+wilcox.test(cv_clean[cv_clean$type == "co",]$bgcorrect_cv_adjposvalue, cv_clean[cv_clean$type== "wt",]$bgcorrect_cv_adjposvalue)
+wilcox.test(cv_clean[cv_clean$type == "mono",]$bgcorrect_cv_adjposvalue, cv_clean[cv_clean$type== "wt",]$bgcorrect_cv_adjposvalue)
+wilcox.test(cv_clean[cv_clean$type == "mono",]$bgcorrect_cv_adjposvalue, cv_clean[cv_clean$type== "co",]$bgcorrect_cv_adjposvalue)
+
+
 #divide into biorep 
 biorep1 = cv_clean[cv_clean$biorep == "1",]
 biorep2 = cv_clean[cv_clean$biorep == "2",]
@@ -26,22 +47,29 @@ lal_b1 = biorep1[biorep1$isolate == "lal",]
 lal_b2 = biorep2[biorep2$isolate == "lal",]
 lal_b3 = biorep3[biorep3$isolate == "lal",]
 
-# # log2 foldchange (n_cv/wildtype)
+# # log2 foldchange (using the OD per CV value without background correction n_cv/n_cv_wildtype)
 # biorep1$logfc_cv = log2(biorep1$n_cv/lal_b1$n_cv)
 # biorep2$logfc_cv = log2(biorep2$n_cv/lal_b2$n_cv)
 # biorep3$logfc_cv = log2(biorep3$n_cv/lal_b3$n_cv)
 
 #Background corrected logfc (all bgcorrected CV values that are negative are set to zero) a pseudocount of one is added 
-biorep1$logfc_cv = log2((biorep1$n_bgcorrect_cv_adjneg+1)/(lal_b1$n_bgcorrect_cv_adjneg+1))
-biorep2$logfc_cv = log2((biorep2$n_bgcorrect_cv_adjneg+1)/(lal_b2$n_bgcorrect_cv_adjneg+1))
-biorep3$logfc_cv = log2((biorep3$n_bgcorrect_cv_adjneg+1)/(lal_b3$n_bgcorrect_cv_adjneg+1))
+# biorep1$logfc_cv = log2((biorep1$n_bgcorrect_cv_adjneg+1)/(lal_b1$n_bgcorrect_cv_adjneg+1))
+# biorep2$logfc_cv = log2((biorep2$n_bgcorrect_cv_adjneg+1)/(lal_b2$n_bgcorrect_cv_adjneg+1))
+# biorep3$logfc_cv = log2((biorep3$n_bgcorrect_cv_adjneg+1)/(lal_b3$n_bgcorrect_cv_adjneg+1))
+
+# Logfold change with only CV values (That normalized to OD), negative values are set to the lowest CV value measured in the dataset
+biorep1$logfc_cv = log2(biorep1$bgcorrect_cv_adjposvalue/lal_b1$bgcorrect_cv_adjposvalue)
+biorep2$logfc_cv = log2(biorep2$bgcorrect_cv_adjposvalue/lal_b2$bgcorrect_cv_adjposvalue)
+biorep3$logfc_cv = log2(biorep3$bgcorrect_cv_adjposvalue/lal_b3$bgcorrect_cv_adjposvalue)
 
 # merge bioreps
 combined_cv = rbind(biorep1, biorep2, biorep3)
+combined_cv = combined_cv %>%  unite("ID1", isolate:type , na.rm = TRUE, remove = FALSE)
+combined_cv = combined_cv %>%  unite("ID", ID1,color , na.rm = TRUE, remove = FALSE)
 combined_cv = na.omit(combined_cv)
 
 #Logfold change plot 
-ggplot(combined_cv, aes(x = isolate, y = logfc_cv,  fill = type)) +
+ggplot(combined_cv, aes(x = ID, y = logfc_cv,  fill = type)) +
   geom_bar(stat = "identity")+
   facet_grid(biorep~.) + 
   theme_bw()
@@ -49,10 +77,20 @@ ggplot(combined_cv, aes(x = isolate, y = logfc_cv,  fill = type)) +
 # Average bioreps
 
 av_bioreps = combined_cv %>%
-  group_by(isolate, type, color, lineage) %>%
+  group_by(isolate, type, color, lineage, ID) %>%
   dplyr::summarise(mean_logfc_cv = mean(logfc_cv),
                    sd_logfc_cv = sd(logfc_cv),
-                   counts = n())
+                   counts = n(),
+                   mean_cv = mean(bgcorrect_cv_adjposvalue))
+
+# T test of cv raw values
+wilcox.test(av_bioreps[av_bioreps$type == "mono",]$mean_cv, av_bioreps[av_bioreps$type == "co",]$mean_cv)
+
+# Plot check
+ggplot(av_bioreps, aes(x = type, y = mean_cv,  fill = type)) +
+  geom_boxplot()+
+  theme_bw()
+
 # remove lal
 av_bioreps = av_bioreps[av_bioreps$isolate != "lal",]
 
