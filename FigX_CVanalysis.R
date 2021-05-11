@@ -5,6 +5,8 @@
 cv_raw <- as.data.frame(read_excel("Data/CV.xlsx", sheet = 2))
 str(cv_raw)
 
+###
+
 #prepare data
 cv_raw$type = as.factor(cv_raw$type)
 cv_raw$biorep = as.factor(cv_raw$biorep)
