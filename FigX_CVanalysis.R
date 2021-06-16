@@ -87,10 +87,14 @@ av_bioreps = combined_cv %>%
 
 # T test of cv raw values
 wilcox.test(av_bioreps[av_bioreps$type == "mono",]$mean_cv, av_bioreps[av_bioreps$type == "co",]$mean_cv)
+wilcox.test(av_bioreps[av_bioreps$Col.bin == "1",]$mean_cv, av_bioreps[av_bioreps$Col.bin == "0",]$mean_cv)
 
 # Plot check
-ggplot(av_bioreps, aes(x = type, y = mean_cv,  fill = type)) +
-  geom_boxplot()+
+ggplot(av_bioreps, aes(x = color, y = mean_cv,  fill = color)) +
+  geom_boxplot(position=position_dodge(0.8))+
+  geom_dotplot(binaxis='y', stackdir='center', 
+               position=position_dodge(0.8))+
+  facet_grid(type~.) +
   theme_bw()
 
 # remove lal
