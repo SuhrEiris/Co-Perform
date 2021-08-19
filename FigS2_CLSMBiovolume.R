@@ -97,7 +97,7 @@ p <- biomass3[biomass3$Type != "LEM",] %>% ggplot(aes(Type, Microns, fill = Type
   ylab(expression(paste("Biovolume (",mu,m^3,")")))
 p
 
-#Nath (11/11/20)
+#T-test
 stat = biomass3 %>%
   group_by(Type) %>%
   summarise(count = n(),
@@ -109,20 +109,20 @@ stat = biomass3 %>%
 t.test(log(biomass3[biomass3$Type == "LAL",]$Microns), log(biomass3[biomass3$Type == "COC",]$Microns), 
        paired = T, var.equal = TRUE)
 
-# Linear model approach 
-biomass3$Type <- as.factor(as.character(biomass3$Type))
-fit.lm <- lm(Microns ~ Type, data = biomass3[biomass3$Type != "LEM",])
-summary(fit.lm)
-
-### Foldchange approach:
-fold <- cbind(biomass3[biomass3$Type == "LAL",], biomass3[biomass3$Type == "COC",])
-fold2 <- fold %>% dplyr::mutate(Ratio = log2(Microns / Microns1)) %>% select(c(1,11))
-
-# linear model approach
-fit.ratio <- lm(Ratio ~ 1, data = fold2, offset = rep(0, nrow(fold2)))
-summary(fit.ratio)
-
-# t-test approach
-t.test(fold2$Ratio, mu=0)
+# # Linear model approach 
+# biomass3$Type <- as.factor(as.character(biomass3$Type))
+# fit.lm <- lm(Microns ~ Type, data = biomass3[biomass3$Type != "LEM",])
+# summary(fit.lm)
+# 
+# ### Foldchange approach:
+# fold <- cbind(biomass3[biomass3$Type == "LAL",], biomass3[biomass3$Type == "COC",])
+# fold2 <- fold %>% dplyr::mutate(Ratio = log2(Microns / Microns1)) %>% select(c(1,11))
+# 
+# # linear model approach
+# fit.ratio <- lm(Ratio ~ 1, data = fold2, offset = rep(0, nrow(fold2)))
+# summary(fit.ratio)
+# 
+# # t-test approach
+# t.test(fold2$Ratio, mu=0)
 
 
