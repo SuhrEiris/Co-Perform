@@ -129,23 +129,19 @@ plot.percentage
 with(relative.abundance, shapiro.test(Percent[Experiment == "PLANK-D16"])) #p = 0.0004413
 with(relative.abundance, shapiro.test(Percent[Experiment == "BEAD-D16"])) # p = 0.2
 
-var.test(Percentage ~ Experiment, data = relative.abundance) #p = 0.006983
-
-# t. test (P = 0.00006691)
-t.test <- t.test(Percentage ~ Experiment, data = relative.abundance, var.equal = FALSE)
-print(t.test)
+var.test(Percent ~ Experiment, data = relative.abundance) #p = 0.006983
 
 # Wilcox.test ( P = 0.0056)
-wilcox.lal <- wilcox.test(Percentage ~ Experiment, data = relative.abundance,
+wilcox.lal <- wilcox.test(Percent ~ Experiment, data = relative.abundance,
                    exact = FALSE)
 print(wilcox.lal)
 
-#LeM
-wilcox.lem <- wilcox.test(Percentage.LeM ~ Experiment, data = relative.abundance,
-                      exact = FALSE)
-print(wilcox.lem)
-
-with(relative.abundance, shapiro.test(Percentage.LeM[Experiment == "Planktonic"])) #p = 0.0004413
-with(relative.abundance, shapiro.test(Percentage.LeM[Experiment == "Bead"])) # p = 0.2
-
-var.test(Percentage.LeM ~ Experiment, data = relative.abundance) #p = 0.006983
+# #LeM
+# wilcox.lem <- wilcox.test(Percentage.LeM ~ Experiment, data = relative.abundance,
+#                       exact = FALSE)
+# print(wilcox.lem)
+# 
+# with(relative.abundance, shapiro.test(Percentage.LeM[Experiment == "Planktonic"])) #p = 0.0004413
+# with(relative.abundance, shapiro.test(Percentage.LeM[Experiment == "Bead"])) # p = 0.2
+# 
+# var.test(Percentage.LeM ~ Experiment, data = relative.abundance) #p = 0.006983
