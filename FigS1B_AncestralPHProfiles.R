@@ -32,26 +32,38 @@ ph_MRS1 <- ph_raw %>% group_by(Species, Time) %>% dplyr::summarize (Count = n(),
 
 ph_MRS1$CI = qnorm(0.975)*ph_MRS1$std.dev/sqrt(ph_MRS1$Count)
 ph_MRS1$Species <- as.character(ph_MRS1$Species)
-ph_MRS1$Species[ph_MRS1$Species=="481"] <- "LaL"
-ph_MRS1$Species[ph_MRS1$Species=="343"] <- "LeM"
-ph_MRS1$Species[ph_MRS1$Species=="co"] <- "Co-culture"
+ph_MRS1$Species[ph_MRS1$Species=="481"] <- "L. lactis"
+ph_MRS1$Species[ph_MRS1$Species=="343"] <- "L. mesenteroides"
+ph_MRS1$Species[ph_MRS1$Species=="Co"] <- "Co-culture"
+ph_MRS1$Species[ph_MRS1$Species=="MRS"] <- "50%MRS"
 
 
 # Plot profiles
-plot.profiles <- ggplot(ph_MRS1, aes(x = Time, y = Mean_ph, color = Species)) +
-  geom_line (size =1) +
+ph_MRS1$Species <- factor(ph_MRS1$Species, levels = c("L. lactis", "L. mesenteroides", "Co-culture", "50%MRS"))
+
+PS1A <- ggplot(ph_MRS1, aes(x = Time, y = Mean_ph, color = Species)) +
+  geom_line (size =1.5) +
   geom_ribbon(aes(ymax = Mean_ph + CI, ymin = Mean_ph - CI, fill = Species), alpha = 0.2, colour = NA)+
   #geom_errorbar(aes(ymax = Mean_ph + std.dev, ymin = Mean_ph - std.dev), width = 0.3) + 
   ylab("pH\n")+
-  xlab("\nTime (Hours)") +
-  theme_bw()+
-  #scale_fill_discrete(name = "Species", labels = c("LaL", "LeM", "Co-culture", "MRS"))+
-  scale_color_manual(values= c("#CCC591", "#798E87", "#C27D38", "#29211F"))+
-  scale_fill_manual(values= c("#CCC591", "#798E87", "#C27D38", "#29211F"))+
-  theme(axis.title = element_text(size = 20),axis.text = element_text(size = 14, color = "Black"),
-        legend.position = "right",legend.title = element_blank(), legend.text = element_text(colour="Black", size=14), legend.key.size = unit(1, "cm"))
-  #guides(color=guide_legend(override.aes = list(size = 3)))
-plot.profiles  
+  xlab("\nTime (hour)") +
+  theme_bw(base_size = 8)+
+  scale_color_manual(values= c("#798E87", "#C27D38","#CCC591", "#29211F"))+
+  scale_fill_manual(values= c("#798E87", "#C27D38","#CCC591", "#29211F"))+
+  theme(axis.title = element_text(color = "Black", face = "bold"),
+        axis.text = element_text(color = "Black", face = "bold"),
+        legend.position = c(0.8, 0.55),
+        legend.title = element_blank(), 
+        legend.text = element_text(colour="Black", face = "bold"),
+        legend.background = element_rect(colour = "Black")) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+PS1A 
 
-####################################################################################################
-
+ggsave("FigS1A.pdf",
+       device = "pdf",
+       plot = PS1A,
+       units="mm",
+       width=88,
+       height=88,
+       dpi = 300)

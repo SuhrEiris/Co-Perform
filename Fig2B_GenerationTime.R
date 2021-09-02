@@ -21,7 +21,7 @@ colnames(df.t.gen.pcoc) <- "pvalue"
 df.t.gen.pboth <- rbind(df.t.gen.psing,df.t.gen.pcoc)
 dfx.t.gen2 <- cbind(dfx.t.gen,df.t.gen.pboth)
 dfx.t.gen2$Var <- "t.gen"
-dfx.t.gen2$Eff <- c("Single", "CoCulture")
+dfx.t.gen2$Eff <- c("Mono-culture", "Co-culture")
 dfx.t.gen2$plot <- "Plot1"
 
 # Make a summary dataframe for plots with Culture and Color effect
@@ -48,15 +48,55 @@ linage2$plot <- "Plot2"
 df.t.gen.all <- rbind(dfx.t.gen2, df.t.gen2,linage2)
 df.t.gen.all$p.correct <- p.adjust(df.t.gen.all$pvalue, method = "fdr")
 
-df.t.gen.all$Eff <- factor(df.t.gen.all$Eff, levels = c("Single", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin", "Linage"))
+#Change names of Eff
+rownames(df.t.gen.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+df.t.gen.all$Eff = rownames(df.t.gen.all)
+df.t.gen.all$Eff <- factor(df.t.gen.all$Eff, levels = c("Mono-culture", "Co-culture","Culture","Morphotype", "Culture:Morphotype", "Lineage"))
+df.t.gen.all2 = df.t.gen.all[df.t.gen.all$Eff != "Lineage",]
 
-
-p <- df.t.gen.all[df.t.gen.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
+#Generation time plot with main variables (Fig2B)
+P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Plot2",] %>% 
+  ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2)+
   theme_bw()+
-  geom_hline(yintercept = 0, color = "dodgerblue4", size = 0.8)+
-  labs(title = "GenerationTime")+
-  scale_y_continuous(limits = c(-0.6,0.5))+
-  facet_grid(~plot, scale= "free_x", space = "free_x")
-p
+  facet_grid(plot~.)+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of generation time)", 
+       title = "Generation time\n")+
+  geom_hline(yintercept = 0, color = "black", size = 0.6, alpha =1)+
+  scale_y_continuous(limits = c(-0.4,0.6)) +
+  theme_bw(base_size = 8)+
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  annotate(geom = "text", label = "Padj=0.703", x = 1, y = 0.15, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj=0.002", x = 2, y = 0.38, family="sans", size = 2, fontface = 2)
+P2B
+
+#Generation time plot with other variables (FigS4B)
+PS4B <- df.t.gen.all2[df.t.gen.all2$plot != "Plot1",] %>% 
+  ggplot(aes(x= Eff, y =est.))+
+  geom_point(size = 2)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2)+
+  theme_bw()+
+  facet_grid(plot~.)+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of generation time)", 
+       title = "Generation time\n")+
+  geom_hline(yintercept = 0, color = "black", size = 0.6, alpha =1)+
+  scale_y_continuous(limits = c(-0.6,0.6)) +
+  theme_bw(base_size = 8)+
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+ 
+  annotate(geom = "text", label = "Padj=0.002", x = 1, y = 0.4, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj=0.019", x = 2, y = 0.3, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj=0.002", x = 3, y = -0.1, family="sans", size = 2, fontface = 2)
+PS4B

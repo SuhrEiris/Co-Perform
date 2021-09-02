@@ -13,12 +13,9 @@ library(RCon3D)
 
 ## Other packages
 library(foreach)
-library(ggplot2) 
 library(reshape2) # melt
 library(rgl) # plot3d
 library(COEF) # fancy_scientific (devtools::install_github("Russel88/COEF"))
-library(dplyr)
-library(tidyr)
 
 
 ######################################### Load and prepare images ###########################################
@@ -78,24 +75,36 @@ biomass4 = biomass3 %>%
 biomass4$CI =  qnorm(0.975)*biomass4$sd_microns/sqrt(biomass4$observations)
 biomass4$log_CI = qnorm(0.975)*biomass4$sd_log_microns/sqrt(biomass4$observations)
 
-
+biomass3$Type[biomass3$Type=="LAL"] <- "Mono-culture"
+biomass3$Type[biomass3$Type=="COC"] <- "Co-culture"
 # Plot
-p <- biomass3[biomass3$Type != "LEM",] %>% ggplot(aes(Type, Microns, fill = Type)) +
-  geom_boxplot(alpha= 1) +
+PS2 <- biomass3[biomass3$Type != "LEM",] %>% 
+  ggplot(aes(Type, Microns, fill = Type)) +
+  geom_boxplot(alpha= 1, width = 0.6) +
   #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.15, fill = "black", binwidth = 0.4, alpha = 1) +
   stat_summary(fun = mean, color = "black", shape = 3)+
   #stat_summary(fun.y = mean, fun.ymin = function(x) mean(x) - sd(x), fun.ymax = function(x) mean(x) + sd(x), geom = "pointrange")+
-  theme_bw() +
+  theme_bw(base_size = 8) +
   scale_fill_manual(values = c("#CCC591", "#798E87"))+
   scale_y_log10()+
+  ylim(100000,7000000)+
   xlab("")+
-  theme(legend.title = element_text(size = 20), 
-        legend.text = element_text(size=20),
-        axis.text = element_text(size = 18, color = "Black"), 
-        axis.title = element_text(size = 24),
-        axis.text.x = element_text(size=20))+
-  ylab(expression(paste("Biovolume (",mu,m^3,")")))
-p
+  theme(legend.position = "none",
+        axis.text = element_text(color = "Black", face = "bold"), 
+        axis.title = element_text(color = "Black", face = "bold"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
+  ylab(expression(paste("Biovolume (",mu,m^3,")")))+
+  annotate(geom = "text", label = "P = 0.023", x = 1.5, y = 6000000, family="sans", size = 2, fontface = 2)
+PS2
+
+ggsave("FigS2.pdf",
+       device = "pdf",
+       plot = PS2,
+       units="mm",
+       width=88,
+       height=88,
+       dpi = 300)
 
 #T-test
 stat = biomass3 %>%
@@ -106,7 +115,7 @@ stat = biomass3 %>%
 
 ### Regular stats
 # Test approach - paired with equal variance
-t.test(log(biomass3[biomass3$Type == "LAL",]$Microns), log(biomass3[biomass3$Type == "COC",]$Microns), 
+t.test(log(biomass3[biomass3$Type == "Mono-culture",]$Microns), log(biomass3[biomass3$Type == "Co-culture",]$Microns), 
        paired = T, var.equal = TRUE)
 
 # # Linear model approach 

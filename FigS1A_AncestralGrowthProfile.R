@@ -6,15 +6,11 @@ setwd("~/Dropbox/MME_Co-Adatpt/Experiments_2018/Evo_1/Variant_data/GrowthCurves"
 # Packs
 
 #install.packages("growthcurver")
-#library("growthcurver")
+library("growthcurver")
 # Install updated version of GrowthCurver
 #install_github("Russel88/growthcurver", force = TRUE)
-library(growthcurver)
-library("readxl")
-library("dplyr")
-library("tidyr")
+
 library("stringr")
-library("ggplot2")
 library("broom")
 library("multcomp")
 
@@ -123,33 +119,40 @@ wildtypedata$CI =qnorm(0.975)*wildtypedata$sd_OD/sqrt(wildtypedata$reps)
 
 wildtypedata$Time <- as.numeric(wildtypedata$Time)
 wildtypedata <- filter(wildtypedata, Time < 1140)
+wildtypedata$hour <- wildtypedata$Time/60
 
-# Make CI 
+wildtypedata$Species[wildtypedata$Species=="LaL"] <- "L. lactis"
+wildtypedata$Species[wildtypedata$Species=="LeM"] <- "L. mesenteroides"
 
-comb.plot <- wildtypedata %>% ggplot(aes(x = Time, y = mean_OD, color = Species))+
+
+#FigS1B 
+
+PS1B <- wildtypedata %>% 
+  ggplot(aes(x = hour, y = mean_OD, color = Species))+
+  geom_line(size = 1)+
   scale_fill_manual(values= wes_palette(name="Moonrise2"))+
   scale_color_manual(values= wes_palette(name="Moonrise2"))+
-  geom_ribbon(aes(ymax = mean_OD + CI, ymin = mean_OD - CI, fill = Species), alpha = 0.2, size = 0) +
-  #geom_point()+
-  geom_line(size = 2)+
-  #geom_jitter()+
-  #geom_smooth()+
-  theme_bw()+
-  scale_x_continuous(breaks = seq(0,1220,by=200), limits=c(0, 1120))+ 
-  labs(x="\nTime(min)", y= "OD (600nm)\n")+
-  theme(legend.title = element_text(size = 20), 
-        legend.text = element_text(size=20),
-        axis.text = element_text(size = 18, color = "Black"), 
-        axis.title = element_text(size = 24),
-        axis.text.x = element_text(size=20))
-comb.plot
+  geom_ribbon(aes(ymax = mean_OD + CI, ymin = mean_OD - CI, fill = Species), alpha = 0.2, color = NA) +
+  theme_bw(base_size = 8)+
+  scale_x_continuous(breaks = seq(0,16,by=4), limits=c(0, 16))+ 
+  labs(x="\nTime(hour)", y= "OD600nm\n")+
+  theme(legend.position = c(0.8,0.15),
+        legend.title = element_blank(), 
+        legend.text = element_text(face = "bold.italic"),
+        legend.background = element_rect(colour = "Black"),
+        axis.text = element_text(color = "Black", face = "bold"), 
+        axis.title = element_text(color = "Black", face = "bold"))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+PS1B
 
-comb.plot <- data.wild %>% ggplot(aes(x = Time, y = Average, color = Species))+
-  #geom_smooth()+
-  geom_jitter()+
-  #geom_line()+
-  #facet_wrap(~biorep)+
-  theme_bw()
-comb.plot
+#setwd("~/Desktop/PhD_nasuh/PhD_exp/Projects/Co-Perform")
+ggsave("FigS1B.pdf",
+       device = "pdf",
+       plot = PS1B,
+       units="mm",
+       width=88,
+       height=88,
+       dpi = 300)
 
 

@@ -1,5 +1,5 @@
 
-# Load data (create CSV file etc)
+# Load data
 cfu <- read_excel("Data/df.beadexperimentCFU.xlsx")
 
 #Average technical replicates
@@ -45,38 +45,47 @@ cfu_data.9 <- log_data %>%
 pres <- cfu_data.9[!grepl("Z", cfu_data.9$Count_of),]
 pres2 <- cfu_data.9[!grepl("Z", cfu_data.9$Species),]
 
-pres2$Species[pres2$Species=="X"] <- "LaL (Single)"
-pres2$Species[pres2$Species=="Y"] <- "LeM (Single)"
+pres2$Species[pres2$Species=="X"] <- "Mono-culture (L. lactis)"
+pres2$Species[pres2$Species=="Y"] <- "Mono-culture (L. mesenteroides)"
 pres2$Species[pres2$Species=="XY"] <- "Co-culture"
-pres2$Count_of[pres2$Count_of=="X"] <- "LaL"
-pres2$Count_of[pres2$Count_of=="Y"] <- "LeM"
-
+pres2$Count_of[pres2$Count_of=="X"] <- "L. lactis"
+pres2$Count_of[pres2$Count_of=="Y"] <- "L. mesenteroides"
 # SE for CI intervals
 
 pres2$se = pres2$Std.dev_bio/sqrt(pres2$Count_bio)
 pres2$CI = qnorm(0.975)*pres2$Std.dev_bio/sqrt(pres2$Count_bio)
 
+#Labels for factgrid
 
 pres.plot <- ggplot(data=pres2, aes(x=Day, y= CFU, fill = Count_of, color = Count_of))+
-  geom_point(size=2)+
-  geom_line(size=1)+
+  geom_point(size=1)+
+  geom_line(size=0.5)+
   facet_grid(~Species)+
-  geom_ribbon(aes(ymax = CFU + CI, ymin = CFU - CI, alpha = 0.2, size = NA)) +
-  labs(x="\nTime (days)",y="CFU per mL\n") + 
+  geom_ribbon(aes(ymax = CFU + CI, ymin = CFU - CI, alpha = 0.1, size = NA)) +
+  labs(x="\nTime (days)",y="CFU/mL\n") + 
   scale_x_continuous(breaks = seq(1,18,by=3))+
-  scale_y_continuous(breaks = seq(4,8, by =1))+
-  #labs(shape = "Species") +
-  #labs(color = "Species") +
-  #scale_y_log10() +
+  scale_y_continuous(breaks = seq(4,8, by =1)) +
   scale_color_manual(values= wes_palette("Moonrise2"))+
   scale_fill_manual(values = wes_palette("Moonrise2"))+
-  theme_bw()+
-  theme(legend.position = "bottom", legend.title = element_text(size = 20), 
-        legend.text = element_text(size=20))+
-  theme(axis.text = element_text(size = 18, color = "Black"), axis.title = element_text(size = 24),
-        axis.text.x = element_text(size=20))
+  scale_alpha(guide=FALSE)+
+  theme_bw(base_size = 8)+
+  theme(legend.position = c(0.91, 0.15),
+        legend.title = element_blank(),
+        legend.text = element_text(face = "bold.italic"),
+        strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "white"))+
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold")) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
 pres.plot
 
+ggsave("Fig1B.pdf",
+       plot = pres.plot,
+       units="cm",
+       width=18,
+       height=10,
+       dpi = 300)
 
 # T.test different days 
 
@@ -173,4 +182,3 @@ t.test(d13.lem$Mean_cfu ~ d13.lem$Species)
 
 d16.lem = CFU.ttest.lem[CFU.ttest.lem$Day == "16",]
 t.test(d16.lem$Mean_cfu ~ d16.lem$Species)
-

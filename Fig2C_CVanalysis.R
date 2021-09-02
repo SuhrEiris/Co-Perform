@@ -124,7 +124,7 @@ colnames(df.cv.pcoc) <- "pvalue"
 df.cv.pboth <- rbind(df.cv.psing,df.cv.pcoc)
 dfx.cv2 <- cbind(dfx.cv,df.cv.pboth)
 dfx.cv2$Var <- "cv"
-dfx.cv2$Eff <- c("Mono", "CoCulture")
+dfx.cv2$Eff <- c("Mono-culture", "Co-culture")
 dfx.cv2$plot <- "Plot1"
 
 # Make a summary dataframe for plots with Culture and Color effect
@@ -153,16 +153,54 @@ df.cv.all <- rbind(dfx.cv2, df.cv2,linage2)
 # FDR on all p-values
 df.cv.all$p.correct <- p.adjust(df.cv.all$pvalue, method = "fdr")
 
-#Order the variables for plotting
-df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin", "Linage"))
+#Change Eff names
+rownames(df.cv.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+df.cv.all$Eff = rownames(df.cv.all)
+df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
+df.cv.all2 = df.cv.all[df.cv.all$Eff != "Lineage",]
+
 
 #Figure
-df.cv.all[df.cv.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
+P2C = df.cv.all2[df.cv.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
-  theme_bw()+
-  geom_hline(yintercept = 0, color = "dodgerblue4", size = 0.8)+
-  labs(title = "CV analysis")+
-  facet_grid(~plot, scale= "free_x", space = "free_x")
+  theme_bw(base_size = 8)+
+  facet_grid(plot~.)+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of biofilm formation)", 
+       title = "Biofilm formation\n")+
+  scale_y_continuous(limits = c(-5,5)) +
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+ 
+  annotate(geom = "text", label = "Padj= 0.00002", x = 1, y = 2.9, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj= 4x10-15", x = 2, y = 4.7, family="sans", size = 2, fontface = 2)
+P2C
 
+#Plot Biofilm w other variables (FigS4C)
 
+PS4C = df.cv.all2[df.cv.all2$plot != "Plot1",] %>% ggplot(aes(x= Eff, y =est.))+
+  geom_point(size = 2)+
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
+  theme_bw(base_size = 8)+
+  facet_grid(plot~.)+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of biofilm formation)", 
+       title = "Biofilm formation\n")+
+  scale_y_continuous(limits = c(-5,5)) +
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+ 
+  annotate(geom = "text", label = "Padj= 0.002", x = 1, y = 3.3, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj= 0.0001", x = 2, y = 3.6, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj=0.008", x = 3, y = -4, family="sans", size = 2, fontface = 2)
+
+PS4C

@@ -38,7 +38,7 @@ bead_ratio.t$Relative.abundance <- bead_ratio.t$LaL.cf/bead_ratio.t$Total.cf
 bead_ratio.t$Percentage <- bead_ratio.t$Relative.abundance*100
 
 bead_rat <- bead_ratio.t %>%
-  mutate(Experiment = "BEAD-D16")
+  mutate(Experiment = "Bead-transfer")
 
 bead_rat <- dplyr::select(bead_rat, -c(Sample))
 
@@ -84,7 +84,7 @@ plank_co_ratio <- plank_co_ratio %>%
          Percent = percentage,
          Total.cfu = totalCFU,
          Replicate = Species) %>%
-  mutate(Experiment = "PLANK-D16") %>%
+  mutate(Experiment = "Planktonic-transfer") %>%
   mutate(Species = "XY")
 
 # Merge Evo1 and Evoplank ####
@@ -104,24 +104,40 @@ relative.abundance.2 <- relative.abundance %>%
             Mean.Percentage = mean(Percent),
             Sd.Percentage = sd(Percent))
 
-my_comparisons <- list( c("BEAD-D16", "PLANK-D16"))
+my_comparisons <- list( c("Bead-transfer", "Planktonic-transfer"))
 
-plot.percentage <- ggplot(relative.abundance, aes(x = Experiment, y = Percent, fill = Experiment)) +
-  geom_boxplot(alpha= 0.6) +
-  geom_dotplot(binaxis='y', stackdir='center', dotsize=1, binwidth = 0.4, fill = "#798E87", alpha = 0.5) +
-  stat_summary(fun = mean, color = "black", size = 20, geom = "point", shape = 3)+
-  theme_bw()+
+plot.percentage <- ggplot(relative.abundance, 
+                          aes(x = Experiment, y = Percent, fill = Experiment)) +
+  geom_boxplot(width = 0.6, alpha = 0.6,
+               color = "Black", outlier.shape=NA,
+               show.legend = FALSE) +
+  stat_boxplot(geom ='errorbar', width = 0.1, color ="black") +
+  stat_summary(fun = mean, color = "red", fill = "red",
+               size = 2,geom = "point",
+               shape = 16,
+               show.legend = FALSE)+
   ylim(0,11.5)+
-  stat_boxplot(geom ='errorbar', width = 0) +
-  xlab("") +
-  theme(axis.text.x = element_text(size=24))+
-  theme(axis.title = element_text(size = 24))+
-  theme(axis.text = element_text(size = 24, color = "Black"))+
-  ylab ("Amount La. lactis (%)") +
+  xlab("\n Model") +
+  ylab ("Relative abundance of L. lactis (%) \n") +
   scale_fill_manual(values= c("#798E87", "#798E87"))+
-  theme(legend.position="none")
+  theme(legend.position = "none") +
+  theme_bw(base_size = 8)+
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) + 
+  geom_dotplot(binaxis='y', stackdir='center', 
+               dotsize=0.4, 
+               binwidth = 0.6, alpha = 1,
+               fill = "#798E87", color = "black", linetype ="solid")
 plot.percentage
 
+ggsave("Fig1C.pdf",
+       plot = plot.percentage,
+       units="cm",
+       width=6,
+       height=8,
+       dpi = 300)
 
 # Assumptions for unpaired two-sample t.test and wilcoxon ####
 #LaL

@@ -16,4 +16,3 @@ library(devtools)
 library(multcomp)
 #install_github("Russel88/COEF")
 library(COEF)
-

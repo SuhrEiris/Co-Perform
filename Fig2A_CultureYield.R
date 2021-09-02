@@ -20,7 +20,7 @@ colnames(df.k.pcoc) <- "pvalue"
 df.k.pboth <- rbind(df.k.psing,df.k.pcoc)
 dfx.k2 <- cbind(dfx.k,df.k.pboth)
 dfx.k2$Var <- "k"
-dfx.k2$Eff <- c("Single", "CoCulture")
+dfx.k2$Eff <- c("Mono-culture", "Co-culture")
 dfx.k2$plot <- "Plot1"
 
 # Make a summary dataframe for plots with Culture and Color effect
@@ -47,14 +47,52 @@ linage2$plot <- "Plot2"
 df.k.all <- rbind(dfx.k2, df.k2,linage2)
 df.k.all$p.correct <- p.adjust(df.k.all$pvalue, method = "fdr")
 
-df.k.all$Eff <- factor(df.k.all$Eff, levels = c("Single", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin", "Linage"))
+#Change Eff names
+rownames(df.k.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+df.k.all$Eff = rownames(df.k.all)
+df.k.all$Eff <- factor(df.k.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
+df.k.all2 = df.k.all[df.k.all$Eff != "Lineage",]
 
-
-p <- df.k.all[df.k.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
+P2A <- df.k.all2[df.k.all2$plot != "Plot2",] %>% 
+  ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
-  theme_bw()+
-  geom_hline(yintercept = 0, color = "red")+
-  labs(title = "Yield")+
-  facet_grid(~plot, scale= "free_x", space = "free_x")
-p
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.2)+
+  theme_bw(base_size = 8)+
+  facet_grid(plot~.)+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  geom_hline(yintercept = 0, color = "black", size = 0.6, alpha =1)+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of culture yield)", 
+       title = "Culture yield\n")+
+  scale_y_continuous(limits = c(-0.4,0.6)) +
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+ 
+  annotate(geom = "text", label = "Padj= 0.676", x = 1, y = 0.3, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj=0.008", x = 2, y = 0.1, family="sans", size = 2, fontface = 2)
+P2A
+
+# Plot culture yield other variables (figS4A)
+PS4A <- df.k.all2[df.k.all2$plot != "Plot1",] %>% 
+  ggplot(aes(x= Eff, y =est.))+
+  geom_point(size = 2)+
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.2)+
+  theme_bw(base_size = 8)+
+  facet_grid(plot~.)+
+  theme(strip.text.y = element_text(color="black", face="bold"))+
+  geom_hline(yintercept = 0, color = "black", size = 0.6, alpha =1)+
+  labs(x="", 
+       y = "\n\nLog2(foldchange of culture yield)", 
+       title = "Culture yield\n")+
+  scale_y_continuous(limits = c(-0.6,0.6)) +
+  theme(axis.text = element_text(color = "Black", face = "bold"),
+        axis.title = element_text(color = "Black", face = "bold"),
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+ 
+  annotate(geom = "text", label = "Padj= 0.013", x = 1, y = 0.6, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj=0.676", x = 2, y = 0.22, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj=0.676", x = 3, y = 0.3, family="sans", size = 2, fontface = 2)
+PS4A
