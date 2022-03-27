@@ -36,6 +36,7 @@ cfu_data.8 = cfu_data.8[-65,]
 log_data = cfu_data.8
 log_data$Mean_cfu = log10(log_data$Mean_cfu)
 
+#Average biological replicates
 cfu_data.9 <- log_data %>% 
   group_by(Day, Species, Count_of) %>% 
   dplyr::summarize(Count_bio= n(), 
@@ -50,6 +51,7 @@ pres2$Species[pres2$Species=="Y"] <- "Mono-culture (L. mesenteroides)"
 pres2$Species[pres2$Species=="XY"] <- "Co-culture"
 pres2$Count_of[pres2$Count_of=="X"] <- "L. lactis"
 pres2$Count_of[pres2$Count_of=="Y"] <- "L. mesenteroides"
+
 # SE for CI intervals
 
 pres2$se = pres2$Std.dev_bio/sqrt(pres2$Count_bio)
