@@ -1,12 +1,6 @@
 
 ###############################     General Settings    ###################
 
-# Set working directory
-setwd("C:/Users/ncz500/Dropbox/MME_Co-Perform/Experiments_2019/Confocal")
-
-# Set working directory (Nathalie)
-setwd("C:/Users/nasuh/Dropbox/MME_Co-Adatpt/Experiments_2019/Confocal")
-
 ## The package
 #devtools::install_github("Russel88/RCon3D")
 library(RCon3D)
@@ -21,7 +15,7 @@ library(COEF) # fancy_scientific (devtools::install_github("Russel88/COEF"))
 ######################################### Load and prepare images ###########################################
 # Specify paths of images
 #path <- "C:/Users/ncz500/Dropbox/MME_Co-Perform/Experiments_2019/Confocal/ConvertData/"
-path <- "C:/Users/nasuh/Dropbox/MME_Co-Adatpt/Experiments_2019/Confocal/ConvertData/"
+path <- "~/Desktop/Github/Co-Perform/Confocal/ConvertData"
 
 setwd(gsub("/ConvertData","",path))
 
@@ -61,7 +55,7 @@ biomass3 <- biomass2 %>% group_by(Date, Type) %>% dplyr::summarise(Observations 
 
 # The biomass in cubic micron
 biomass3$Microns <- biomass3$biomass * pwidth^2 * zstep
-
+biomass3$biomass_pr_cubicmicrons = biomass3$Microns/(1.225*10^6)
 biomass3$log_microns = log(biomass3$Microns)
 
 biomass4 = biomass3 %>%

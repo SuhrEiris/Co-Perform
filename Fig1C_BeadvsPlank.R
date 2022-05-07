@@ -33,6 +33,7 @@ bead_ratio.t = bead_ratio[,-(1:5)]
 bead_ratio.t = bead_ratio.t[,-(6)]
 
 
+#Make relative abundance
 bead_ratio.t$Total.cf <- bead_ratio.t$LaL.cf + bead_ratio.t$LeM.cf
 bead_ratio.t$Relative.abundance <- bead_ratio.t$LaL.cf/bead_ratio.t$Total.cf
 bead_ratio.t$Percentage <- bead_ratio.t$Relative.abundance*100
@@ -49,7 +50,8 @@ bead_rat2 <- bead_rat %>%
             LeM.cfu = mean(LeM.cf),
             Total.cfu = mean(Total.cf),
             Relative.abund = mean(Relative.abundance),
-            Percent = mean(Percentage))
+            Percent = mean(Percentage),
+            tech_count = n())
 
 bead_rat2 <-tibble::as_tibble(bead_rat2)
 
@@ -73,9 +75,11 @@ plank_lem <- plank_lem %>%
 plank_co_ratio <- cbind(plank_lem, plank_lal, by= "Species")
 plank_co_ratio = plank_co_ratio[,2:4] 
 
+#Make relative abundance
 plank_co_ratio$totalCFU <- plank_co_ratio$LaL + plank_co_ratio$LeM
 plank_co_ratio$relative.abundance <- plank_co_ratio$LaL/plank_co_ratio$totalCFU
 plank_co_ratio$percentage <- plank_co_ratio$relative.abundance*100
+
 
 plank_co_ratio <- plank_co_ratio %>%
   dplyr::rename(LeM.cfu = LeM,
