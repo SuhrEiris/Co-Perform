@@ -68,20 +68,22 @@ ggplot(combined_ph, aes(x = ID, y = logfc_ph,  fill = type)) +
   facet_grid(biorep~.) + 
   theme_bw()
 
-#### Average bioreps procedure ####
-av_bioreps = combined_ph %>%
-  group_by(isolate, type, color, lineage, ID) %>%
-  dplyr::summarise(mean_logfc_ph = mean(logfc_ph),
-                   sd_logfc_ph = sd(logfc_ph),
-                   counts = n(),
-                   mean_ph = mean(ph))
+#av_bioreps = combined_ph
+
+# #### Average bioreps procedure ####
+# av_bioreps = combined_ph %>%
+#   group_by(isolate, type, color, lineage, ID) %>%
+#   dplyr::summarise(mean_logfc_ph = mean(logfc_ph),
+#                    sd_logfc_ph = sd(logfc_ph),
+#                    counts = n(),
+#                    mean_ph = mean(ph))
 
 # T test of ph raw values
-wilcox.test(av_bioreps[av_bioreps$type == "mono",]$mean_ph, av_bioreps[av_bioreps$type == "co",]$mean_ph)
+wilcox.test(av_bioreps[av_bioreps$type == "mono",]$ph, av_bioreps[av_bioreps$type == "co",]$ph)
 #wilcox.test(av_bioreps[av_bioreps$Col.bin == "1",]$mean_cv, av_bioreps[av_bioreps$Col.bin == "0",]$mean_cv)
 
 # Plot check
-ggplot(av_bioreps, aes(x = color, y = mean_ph,  fill = color)) +
+ggplot(av_bioreps, aes(x = color, y = ph,  fill = color)) +
   geom_boxplot(position=position_dodge(0.8))+
   geom_dotplot(binaxis='y', stackdir='center', 
                position=position_dodge(0.8))+
@@ -95,7 +97,7 @@ av_bioreps = av_bioreps[av_bioreps$isolate != "lal",]
 av_bioreps$Col.bin <- ifelse(av_bioreps$color == "l",1,0)
 av_bioreps$Cult.bin <- ifelse(av_bioreps$type == "co",1,0) 
 
-lm <- lme(mean_logfc_ph ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=av_bioreps)
+lm <- lme(logfc_ph ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=av_bioreps)
 #lm2 <- lm(mean_logfc_ph ~ Cult.bin*Col.bin, data=av_bioreps)
 lm.sum <- summary(lm)
 lm.intervals <- intervals(lm,which = "fixed")
@@ -129,8 +131,8 @@ df.ph2$plot <- "Plot2"
 names(df.ph2)
 
 # Dataframe for lineage 
-lm.fit.ph.null <- lmer(mean_logfc_ph ~ Cult.bin*Col.bin + (1|lineage), data=av_bioreps, REML=FALSE)
-lm.fit.ph.model <- lm(mean_logfc_ph ~ Cult.bin*Col.bin , data=av_bioreps)
+lm.fit.ph.null <- lmer(logfc_ph ~ Cult.bin*Col.bin + (1|lineage), data=av_bioreps, REML=FALSE)
+lm.fit.ph.model <- lm(logfc_ph ~ Cult.bin*Col.bin , data=av_bioreps)
 linage <- anova(lm.fit.ph.null, lm.fit.ph.model)
 linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
 colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
@@ -162,7 +164,7 @@ ave_1 = df.ph.all2[df.ph.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))
   labs(x="", 
        y = "\n\nLog2(foldchange of pH)", 
        title = "average of bioreps (N = 12)\n")+
-  scale_y_continuous(limits = c(-0.1,0.1)) +
+  scale_y_continuous(limits = c(-0.6,0.6)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
         plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
@@ -170,7 +172,7 @@ ave_1 = df.ph.all2[df.ph.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))
         panel.grid.minor = element_blank()) +
   annotate(geom = "text", label = "Padj = 0.378", x = 1, y = 0.1, family="sans", size = 2, fontface = 2)+
   annotate(geom = "text", label = "Padj = 0.117", x = 2, y = 0.1, family="sans", size = 2, fontface = 2)
-
+ave_1
 
 #Plot Biofilm w other variables (FigS4C)
 
@@ -224,7 +226,7 @@ df.ph.pboth <- rbind(df.ph.psing,df.ph.pcoc)
 dfx.ph2 <- cbind(dfx.ph,df.ph.pboth)
 dfx.ph2$Var <- "ph"
 dfx.ph2$Eff <- c("Mono-culture", "Co-culture")
-dfx.ph2$plot <- "Plot1"
+dfx.ph2$plot <- "pH"
 
 # Make a summary dataframe for plots with Culture and Color effect
 df.ph <- data.frame(lm.intervals$fixed[-1, ])
@@ -258,48 +260,57 @@ df.ph.all$Eff = rownames(df.ph.all)
 df.ph.all$Eff <- factor(df.ph.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
 df.ph.all2 = df.ph.all[df.ph.all$Eff != "Lineage",]
 
+# change variables 
+combined_ph$type = as.character(combined_ph$type)
+combined_ph$type[combined_ph$type=="mono"] <- "Mono-culture"
+combined_ph$type[combined_ph$type=="co"] <- "Co-culture"
+combined_ph$type = as.factor(combined_ph$type)
+str(combined_ph)
 
 #Figure
- noave_1 = df.ph.all2[df.ph.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))+
+P2D= df.ph.all2[df.ph.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
+  geom_point(data = combined_ph, aes(x = type, y = logfc_ph), 
+             alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
-  facet_grid(plot~.)+
+  facet_grid(.~plot)+
   theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
-  labs(x="", 
-       y = "\n\nLog2(foldchange of pH)", 
-       title = "NO average of bioreps (n = 36)\n")+
+  geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
+  labs(x="", y = "\n\n Log2(foldchange of pH)\n")+
   scale_y_continuous(limits = c(-0.1,0.1)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
+        strip.text = element_text(color = "Black", face = "bold", size = 9))+ 
   theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) +
-  annotate(geom = "text", label = "Padj = 0.240", x = 1, y = 0.1, family="sans", size = 2, fontface = 2)+
-  annotate(geom = "text", label = "Padj = 0.041", x = 2, y = 0.1, family="sans", size = 2, fontface = 2)
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_rect(fill = "white")) +
+  annotate(geom = "text", label = "Padj = 0.240", x = 1, y = 0.07, family="sans", size = 2, fontface = 2)+
+  annotate(geom = "text", label = "Padj = 0.020", x = 2, y = 0.07, family="sans", size = 2, fontface = 2)
+ P2D
 
-#Plot Biofilm w other variables (FigS4C)
-
+ #Plot Biofilm w other variables (FigS4C)
 noave_2 = df.ph.all2[df.ph.all2$plot != "Plot1",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
+ # geom_point(data = combined_ph, aes(x = type, y = logfc_ph),alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
   theme_bw(base_size = 8)+
   facet_grid(plot~.)+
   theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
-  labs(x="", 
-       y = "\n\nLog2(foldchange of pH)", 
-       title = "NO average of bioreps (N = 36)\n")+
+  geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
+  labs(x="", y = "\n\nLog2(foldchange of pH)")+
   scale_y_continuous(limits = c(-.15,.15)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
         plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank()) +
-  annotate(geom = "text", label = "Padj= 0.005", x = 1, y = 0.15, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj= 0.002", x = 1, y = 0.15, family="sans", size = 2, fontface = 2) +
   annotate(geom = "text", label = "Padj= 0.895", x = 2, y = 0.15, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj= 0.056", x = 3, y = 0.15, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj= 0.037", x = 3, y = 0.15, family="sans", size = 2, fontface = 2)
+noave_2
 
 #### grid.arrange ####
 gridExtra::grid.arrange(ave_1, ave_2, noave_1, noave_2, nrow = 2)
