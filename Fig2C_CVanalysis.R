@@ -126,7 +126,7 @@ colnames(df.cv.p) <- "pvalue"
 df.cv2 <- cbind(df.cv,df.cv.p)
 df.cv2$Var <- "cv"
 df.cv2$Eff <- rownames(df.cv)
-df.cv2$plot <- "Plot2"
+df.cv2$plot <- "Biofilm formation (variables)"
 names(df.cv2)
 
 # Dataframe for lineage 
@@ -137,7 +137,7 @@ linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
 colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
 linage2$Var <- "cv"
 linage2$Eff <- "Linage"
-linage2$plot <- "Plot2"
+linage2$plot <- "Biofilm formation (variables)"
 
 # Unite the two data.frames 
 df.cv.all <- rbind(dfx.cv2, df.cv2,linage2)
@@ -160,7 +160,7 @@ str(combined_cv)
 
 
 #Figure
-P2C = df.cv.all2[df.cv.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))+
+P2C = df.cv.all2[df.cv.all2$plot != "Biofilm formation (variables)",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_point(data = combined_cv, aes(x = type, y = logfc_cv), 
              alpha = 0.7, position = position_jitter(width = 0.3), color= "#798E87")+
@@ -185,25 +185,27 @@ P2C
 
 #Plot Biofilm w other variables (FigS4C)
 
-PS4C = df.cv.all2[df.cv.all2$plot != "Plot1",] %>% ggplot(aes(x= Eff, y =est.))+
+PS4C = df.cv.all2[df.cv.all2$plot != "Biofilm formation",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
-  facet_grid(plot~.)+
+  facet_grid(.~plot)+
   theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
+  geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
   labs(x="", 
-       y = "\n\nLog2(foldchange of biofilm formation)", 
-       title = "Biofilm formation\n")+
-  scale_y_continuous(limits = c(-5,5)) +
+       y = "\n\nLog2(foldchange of biofilm formation)\n")+
+  scale_y_continuous(limits = c(-4,4)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
+        strip.text = element_text(color = "Black", face = "bold", size = 9))+ 
   theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+ 
-  annotate(geom = "text", label = "Padj= 0.002", x = 1, y = 3.3, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj= 0.0001", x = 2, y = 3.6, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj=0.008", x = 3, y = -4, family="sans", size = 2, fontface = 2)
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_rect(fill = "white")) +
+  annotate(geom = "text", label = "Padj = 0.0004", x = 1, y = 3.5, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 3.5, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj = 0.007", x = 3, y = -3.5, family="sans", size = 2, fontface = 2)
 
 PS4C
 

@@ -4,6 +4,7 @@ data.omit  <- readRDS("Data/df.phenotypicdata.rds")
 data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
 
 ############  Data from generation time ######
+set.seed(41)
 lm.fit.t.gen <- lme(t.gen ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
 jakob.2 <- summary(lm.fit.t.gen)
 jakob <- intervals(lm.fit.t.gen)
@@ -32,7 +33,7 @@ colnames(df.t.gen.p) <- "pvalue"
 df.t.gen2 <- cbind(df.t.gen,df.t.gen.p)
 df.t.gen2$Var <- "t.gen"
 df.t.gen2$Eff <- rownames(df.t.gen)
-df.t.gen2$plot <- "Plot2"
+df.t.gen2$plot <- "Generation time (variables)"
 names(df.t.gen2)
 
 # Dataframe for linage:
@@ -43,7 +44,7 @@ linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
 colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
 linage2$Var <- "t.gen"
 linage2$Eff <- "Linage"
-linage2$plot <- "Plot2"
+linage2$plot <- "Generation time (variables"
 
 # Unite the two data.frames 
 df.t.gen.all <- rbind(dfx.t.gen2, df.t.gen2,linage2)
@@ -65,7 +66,7 @@ data.omit$Culture <- factor(data.omit$Culture,
 
 
 #Generation time plot with main variables (Fig2B)
-P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Plot2",] %>% 
+P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time (variables)",] %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_point(data = data.omit, aes(x = Culture, y = t.gen),
@@ -92,25 +93,26 @@ P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Plot2",] %>%
 P2B
 
 #Generation time plot with other variables (FigS4B)
-PS4B <- df.t.gen.all2[df.t.gen.all2$plot != "Plot1",] %>% 
+PS4B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time",] %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0)+
   theme_bw()+
-  facet_grid(plot~.)+
-  theme(strip.text.y = element_text(color="black", face="bold"))+
+  facet_grid(.~plot)+
   labs(x="", 
-       y = "\n\nLog2(foldchange of generation time)", 
-       title = "Generation time\n")+
-  geom_hline(yintercept = 0, color = "black", size = 0.6, alpha =1)+
+       y = "\n\nLog2(foldchange of generation time)\n")+
+  geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha =1)+
   scale_y_continuous(limits = c(-0.6,0.6)) +
   theme_bw(base_size = 8)+
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
+        strip.text = element_text(color = "Black", face = "bold", size = 9))+ 
   theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+ 
-  annotate(geom = "text", label = "Padj=0.002", x = 1, y = 0.4, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj=0.019", x = 2, y = 0.3, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj=0.002", x = 3, y = -0.1, family="sans", size = 2, fontface = 2)
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_rect(fill = "white")) +
+  annotate(geom = "text", label = "Padj < 0.0001", x = 1, y = 0.5, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj = 0.0014", x = 2, y = 0.5, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj < 0.0001", x = 3, y = -0.6, family="sans", size = 2, fontface = 2)
 PS4B
