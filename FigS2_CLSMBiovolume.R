@@ -56,7 +56,7 @@ biomass3 <- biomass2 %>% group_by(Date, Type) %>% dplyr::summarise(Observations 
 # The biomass in cubic micron
 biomass3$Microns <- biomass3$biomass * pwidth^2 * zstep
 biomass3$biomass_pr_cubicmicrons = biomass3$Microns/(1.225*10^6)
-biomass3$log_microns = log(biomass3$Microns)
+biomass3$log_microns = log10(biomass3$Microns)
 
 biomass4 = biomass3 %>%
   group_by(Type) %>%
@@ -73,23 +73,28 @@ biomass3$Type[biomass3$Type=="LAL"] <- "Mono-culture"
 biomass3$Type[biomass3$Type=="COC"] <- "Co-culture"
 # Plot
 PS2 <- biomass3[biomass3$Type != "LEM",] %>% 
-  ggplot(aes(Type, Microns, fill = Type)) +
-  geom_boxplot(alpha= 1, width = 0.6) +
-  #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.15, fill = "black", binwidth = 0.4, alpha = 1) +
-  stat_summary(fun = mean, color = "black", shape = 3)+
-  #stat_summary(fun.y = mean, fun.ymin = function(x) mean(x) - sd(x), fun.ymax = function(x) mean(x) + sd(x), geom = "pointrange")+
+  ggplot(aes(x = Type, y = log_microns, fill = Type, color = Type)) +
+  geom_point(alpha = 0.9, position = position_jitter(width = 0.1), size = 2)+
+  stat_summary(fun = mean, fun.min = function(x) mean(x) - sd(x), 
+               fun.max = function(x) mean(x) + sd(x), geom = "pointrange", color = "black", 
+               size = 0.5, alpha = 1)+
   theme_bw(base_size = 8) +
   scale_fill_manual(values = c("#CCC591", "#798E87"))+
-  scale_y_log10()+
-  ylim(100000,7000000)+
+  scale_color_manual(values = c("#CCC591", "#798E87"))+
+  ylim(5,7)+
   xlab("")+
   theme(legend.position = "none",
         axis.text = element_text(color = "Black", face = "bold"), 
         axis.title = element_text(color = "Black", face = "bold"),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())+
+  coord_flip()+
   ylab(expression(paste("Biovolume (",mu,m^3,")")))+
-  annotate(geom = "text", label = "P = 0.023", x = 1.5, y = 6000000, family="sans", size = 2, fontface = 2)
+  theme(axis.text.y = element_text(color = "Black", face = "bold"))+
+  geom_segment(aes(x = 1, y = 7, xend = 2, yend = 7), color = "black", size = 0.35)+
+  geom_segment(aes(x = 1, y = 6.95, xend = 1, yend = 7), color = "black", size = 0.35)+
+  geom_segment(aes(x = 2, y = 6.95, xend = 2, yend = 7), color = "black", size = 0.35)+
+  annotate(geom = "text", label = "Padj = 0.023", x = 1.5, y = 6.7, family="sans", size = 2, fontface = 2)
 PS2
 
 ggsave("FigS2.pdf",
@@ -109,8 +114,10 @@ stat = biomass3 %>%
 
 ### Regular stats
 # Test approach - paired with equal variance
-t.test(log(biomass3[biomass3$Type == "Mono-culture",]$Microns), log(biomass3[biomass3$Type == "Co-culture",]$Microns), 
+L = t.test(log(biomass3[biomass3$Type == "Mono-culture",]$Microns), log(biomass3[biomass3$Type == "Co-culture",]$Microns), 
        paired = T, var.equal = TRUE)
+
+p.adjust(L$p.value, method = "fdr")
 
 # # Linear model approach 
 # biomass3$Type <- as.factor(as.character(biomass3$Type))
