@@ -2,6 +2,8 @@
 #Load dataframe with culture yield values
 data.omit  <- readRDS("Data/df.phenotypicdata.rds")
 str(data.omit)
+
+#remove XB.3-m due to contamination
 data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
 
 #Remove XB-3.m due to contamination

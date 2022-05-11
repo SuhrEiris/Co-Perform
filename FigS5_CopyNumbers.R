@@ -2,6 +2,9 @@
 #Load dataframe with culture yield values
 data.omit  <- readRDS("Data/df.phenotypicdata.rds")
 
+#remove XB.3-m due to contamination
+data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
+
 lm.fit.copy <- lme(copynumb ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
 lm.fit.copy2 <- lm(copynumb ~ Cult.bin*Col.bin, data=data.omit)
 jakob.2 <- summary(lm.fit.copy)
@@ -63,26 +66,38 @@ df.copy.all$Eff <- factor(df.copy.all$Eff, levels = c("Single", "CoCulture", "Cu
 # p
 
 #Figure S5
+
+data.omit$Culture = as.character(data.omit$Culture)
+data.omit$Culture[data.omit$Culture=="Single"] <- "Mono-culture"
+data.omit$Culture[data.omit$Culture=="Coc"] <- "Co-culture"
+data.omit$Culture = as.factor(data.omit$Culture)
+str(data.omit)
+data.omit$Culture <- factor(data.omit$Culture, 
+                            levels = c("Mono-culture", "Co-culture"))
+
 dfx.copy2$Eff <- factor(dfx.copy2$Eff, levels = c("Mono-culture", "Co-culture"))
 
 PS5 = dfx.copy2 %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
+  geom_point(data = data.omit, aes(x = Culture, y =copynumb ),
+             alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
   theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
+  geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
   labs(x="", 
-       y = "Log2(foldchange of copynumbers)\n", 
-       title = "")+
-  scale_y_continuous(limits = c(-0.25,0.85)) +
+       y = "\n\nLog2(foldchange of copynumbers)\n")+
+  scale_y_continuous(limits = c(-2,2)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
+        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
+        strip.text = element_text(color = "Black", face = "bold", size = 9))+ 
   theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+ 
-  annotate(geom = "text", label = "Padj = 0.364", x = 1, y = 0.35, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj = 0.00004", x = 2, y = 0.77, family="sans", size = 2, fontface = 2)
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = "white"))+ 
+  annotate(geom = "text", label = "Padj = 0.193", x = 1, y = 1.5, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 1.5, family="sans", size = 2, fontface = 2)
 PS5
 
 ggsave("FigS5.pdf",
