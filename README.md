@@ -1,6 +1,6 @@
-# Co-Perform
+# Co-performance of L. lactis and Ln. mesenteroides (Co-Perform)
 
-Data and scripts to reproduce results from the "Biofilm co-evolution as a driver for enhanced trait selection in lactic acid bacteria; a case study on Lactococcus lactis subsp. lactis" submitted to XXX
+Data and scripts to reproduce results from the "Biofilm cultivation facilitates coexistence and adaptive evolution in an industrial bacterial community" submitted to NPJ Biofilms and Microbiome.
 
  
  ## Software
@@ -9,5 +9,5 @@ Data and scripts to reproduce results from the "Biofilm co-evolution as a driver
  
  ## Preparation
  
- Install all packages in packages.R. Download all data files. 
+ Install all packages in packages.R. Download all data files.
  
