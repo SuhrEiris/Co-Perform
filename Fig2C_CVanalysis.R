@@ -88,16 +88,36 @@ ggplot(combined_cv, aes(x = color, y = bgcorrect_cv_adjposvalue,  fill = color))
   facet_grid(type~.) +
   theme_bw()
 
+#Average bioreps
+ave_combined_cv = combined_cv %>%
+  group_by(isolate, type, color, lineage, ID) %>%
+  dplyr::summarise(mean_logfc_cv = mean(logfc_cv),
+                   sd_logfc_cv = sd(logfc_cv),
+                   counts = n(),
+                   mean_cv = mean(bgcorrect_cv_adjposvalue))
+
 # remove lal
-combined_cv = combined_cv[combined_cv$isolate != "lal",]
+ave_combined_cv = ave_combined_cv[ave_combined_cv$isolate != "lal",]
 
 # make binary for culture type and color
-combined_cv$Col.bin <- ifelse(combined_cv$color == "l",1,0)
-combined_cv$Cult.bin <- ifelse(combined_cv$type == "co",1,0) 
+ave_combined_cv$Col.bin <- ifelse(ave_combined_cv$color == "l",1,0)
+ave_combined_cv$Cult.bin <- ifelse(ave_combined_cv$type == "co",1,0)
+
+# Remove outlier
+mod <- lm(mean_logfc_cv ~ ., data=as.data.frame(ave_combined_cv[,6]))
+cooksd <- cooks.distance(mod)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+# Outlier removal by Car test
+car::outlierTest(mod)
+# No outliers
 
 set.seed(41)
-lm <- lme(logfc_cv ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=combined_cv)
-lm2 <- lm(logfc_cv ~ Cult.bin*Col.bin, data=combined_cv)
+lm <- lme(mean_logfc_cv ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=ave_combined_cv)
+lm2 <- lm(mean_logfc_cv ~ Cult.bin*Col.bin, data=ave_combined_cv)
 lm.sum <- summary(lm)
 lm.intervals <- intervals(lm,which = "fixed")
 
@@ -129,41 +149,30 @@ df.cv2$Eff <- rownames(df.cv)
 df.cv2$plot <- "Biofilm formation (variables)"
 names(df.cv2)
 
-# Dataframe for lineage 
-lm.fit.cv.null <- lmer(logfc_cv ~ Cult.bin*Col.bin + (1|lineage), data=combined_cv, REML=FALSE)
-lm.fit.cv.model <- lm(logfc_cv ~ Cult.bin*Col.bin , data=combined_cv)
-linage <- anova(lm.fit.cv.null, lm.fit.cv.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "cv"
-linage2$Eff <- "Linage"
-linage2$plot <- "Biofilm formation (variables)"
-
 # Unite the two data.frames 
-df.cv.all <- rbind(dfx.cv2, df.cv2,linage2)
+df.cv.all <- rbind(dfx.cv2, df.cv2)
 
 # FDR on all p-values
 df.cv.all$p.correct <- p.adjust(df.cv.all$pvalue, method = "fdr")
 
 #Change Eff names
-rownames(df.cv.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+rownames(df.cv.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype")
 df.cv.all$Eff = rownames(df.cv.all)
-df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
-df.cv.all2 = df.cv.all[df.cv.all$Eff != "Lineage",]
+df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype"))
 
 #Make jitter ready
-combined_cv$type = as.character(combined_cv$type)
-combined_cv$type[combined_cv$type=="mono"] <- "Mono-culture"
-combined_cv$type[combined_cv$type=="co"] <- "Co-culture"
-combined_cv$type = as.factor(combined_cv$type)
-str(combined_cv)
+ave_combined_cv$type = as.character(ave_combined_cv$type)
+ave_combined_cv$type[ave_combined_cv$type=="mono"] <- "Mono-culture"
+ave_combined_cv$type[ave_combined_cv$type=="co"] <- "Co-culture"
+ave_combined_cv$type = as.factor(ave_combined_cv$type)
+str(ave_combined_cv)
 
 
 #Figure
-P2C = df.cv.all2[df.cv.all2$plot != "Biofilm formation (variables)",] %>% ggplot(aes(x= Eff, y =est.))+
+P2C = df.cv.all[df.cv.all$plot != "Biofilm formation (variables)",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_point(data = combined_cv, aes(x = type, y = logfc_cv), 
-             alpha = 0.7, position = position_jitter(width = 0.3), color= "#798E87")+
+  geom_point(data = ave_combined_cv, aes(x = type, y = mean_logfc_cv), 
+             alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
   facet_grid(.~plot)+
@@ -171,7 +180,7 @@ P2C = df.cv.all2[df.cv.all2$plot != "Biofilm formation (variables)",] %>% ggplot
   geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
   labs(x="", 
        y = "\n\nLog2(foldchange of biofilm formation)\n")+
-  scale_y_continuous(limits = c(-10,10)) +
+  scale_y_continuous(limits = c(-7,7), breaks = seq(-7,7)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
         plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
@@ -179,13 +188,13 @@ P2C = df.cv.all2[df.cv.all2$plot != "Biofilm formation (variables)",] %>% ggplot
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = "white"))+ 
-  annotate(geom = "text", label = "Padj < 0.0001", x = 1, y = 9.9, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 9.9, family="sans", size = 2, fontface = 2) 
+  annotate(geom = "text", label = "Padj < 0.0001", x = 1, y = 7, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 7, family="sans", size = 2, fontface = 2) 
 P2C
 
 #Plot Biofilm w other variables (FigS4C)
 
-PS4C = df.cv.all2[df.cv.all2$plot != "Biofilm formation",] %>% ggplot(aes(x= Eff, y =est.))+
+PS4C = df.cv.all[df.cv.all$plot != "Biofilm formation",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
@@ -194,7 +203,7 @@ PS4C = df.cv.all2[df.cv.all2$plot != "Biofilm formation",] %>% ggplot(aes(x= Eff
   geom_hline(yintercept = 0, color = "darkgrey", size = 0.6, alpha = 1)+
   labs(x="", 
        y = "\n\nLog2(foldchange of biofilm formation)\n")+
-  scale_y_continuous(limits = c(-4,4)) +
+  scale_y_continuous(limits = c(-4,4), breaks = seq(-4,4)) +
   theme(axis.text = element_text(color = "Black", face = "bold"),
         axis.title = element_text(color = "Black", face = "bold"),
         plot.title = element_text(color = "Black", face ="bold", hjust = 0.5),
@@ -203,137 +212,8 @@ PS4C = df.cv.all2[df.cv.all2$plot != "Biofilm formation",] %>% ggplot(aes(x= Eff
         panel.grid.minor = element_blank(),
         strip.text.y = element_blank(),
         strip.background = element_rect(fill = "white")) +
-  annotate(geom = "text", label = "Padj = 0.0004", x = 1, y = 3.5, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj = 0.002", x = 1, y = 3.5, family="sans", size = 2, fontface = 2) + 
   annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 3.5, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj = 0.007", x = 3, y = -3.5, family="sans", size = 2, fontface = 2)
-
-PS4C
-
-
-##### Average bioreps ####
-# av_bioreps = combined_cv %>%
-#   group_by(isolate, type, color, lineage, ID) %>%
-#   dplyr::summarise(mean_logfc_cv = mean(logfc_cv),
-#                    sd_logfc_cv = sd(logfc_cv),
-#                    counts = n(),
-#                    mean_cv = mean(bgcorrect_cv_adjposvalue))
-
-# T test of cv raw values
-wilcox.test(av_bioreps[av_bioreps$type == "mono",]$mean_cv, av_bioreps[av_bioreps$type == "co",]$mean_cv)
-wilcox.test(av_bioreps[av_bioreps$Col.bin == "1",]$mean_cv, av_bioreps[av_bioreps$Col.bin == "0",]$mean_cv)
-
-# Plot check
-ggplot(av_bioreps, aes(x = color, y = mean_cv,  fill = color)) +
-  geom_boxplot(position=position_dodge(0.8))+
-  geom_dotplot(binaxis='y', stackdir='center', 
-               position=position_dodge(0.8))+
-  facet_grid(type~.) +
-  theme_bw()
-
-# remove lal
-av_bioreps = av_bioreps[av_bioreps$isolate != "lal",]
-
-# make binary for culture type and color
-av_bioreps$Col.bin <- ifelse(av_bioreps$color == "l",1,0)
-av_bioreps$Cult.bin <- ifelse(av_bioreps$type == "co",1,0) 
-
-lm <- lme(mean_logfc_cv ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=av_bioreps)
-lm2 <- lm(mean_logfc_cv ~ Cult.bin*Col.bin, data=av_bioreps)
-lm.sum <- summary(lm)
-lm.intervals <- intervals(lm,which = "fixed")
-
-#library(multcomp)
-contr <- rbind("COCvsInter"=c(1,1,0,0)) 
-glht <- multcomp::glht(lm, linfct=contr)
-glht.confint <- confint(glht)
-glht.sum <- summary(glht)
-
-# Make a summary dataframe for plots with single and co-culture 
-dfx.cv <- data.frame(rbind(lm.intervals$fixed[1, ], glht.confint$confint[c(2,1,3)]))
-df.cv.psing <- data.frame(lm.sum$tTable[1,5])
-colnames(df.cv.psing) <- "pvalue"
-df.cv.pcoc <- data.frame(glht.sum$test$pvalues)
-colnames(df.cv.pcoc) <- "pvalue"
-df.cv.pboth <- rbind(df.cv.psing,df.cv.pcoc)
-dfx.cv2 <- cbind(dfx.cv,df.cv.pboth)
-dfx.cv2$Var <- "cv"
-dfx.cv2$Eff <- c("Mono-culture", "Co-culture")
-dfx.cv2$plot <- "Plot1"
-
-# Make a summary dataframe for plots with Culture and Color effect
-df.cv <- data.frame(lm.intervals$fixed[-1, ])
-df.cv.p <- data.frame(lm.sum$tTable[-1,5])
-colnames(df.cv.p) <- "pvalue"
-df.cv2 <- cbind(df.cv,df.cv.p)
-df.cv2$Var <- "cv"
-df.cv2$Eff <- rownames(df.cv)
-df.cv2$plot <- "Plot2"
-names(df.cv2)
-
-# Dataframe for lineage 
-lm.fit.cv.null <- lmer(mean_logfc_cv ~ Cult.bin*Col.bin + (1|lineage), data=av_bioreps, REML=FALSE)
-lm.fit.cv.model <- lm(mean_logfc_cv ~ Cult.bin*Col.bin , data=av_bioreps)
-linage <- anova(lm.fit.cv.null, lm.fit.cv.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "cv"
-linage2$Eff <- "Linage"
-linage2$plot <- "Plot2"
-
-# Unite the two data.frames 
-df.cv.all <- rbind(dfx.cv2, df.cv2,linage2)
-
-# FDR on all p-values
-df.cv.all$p.correct <- p.adjust(df.cv.all$pvalue, method = "fdr")
-
-#Change Eff names
-rownames(df.cv.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
-df.cv.all$Eff = rownames(df.cv.all)
-df.cv.all$Eff <- factor(df.cv.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
-df.cv.all2 = df.cv.all[df.cv.all$Eff != "Lineage",]
-
-
-#Figure
-P2C = df.cv.all2[df.cv.all2$plot != "Plot2",] %>% ggplot(aes(x= Eff, y =est.))+
-  geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
-  theme_bw(base_size = 8)+
-  facet_grid(plot~.)+
-  theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
-  labs(x="", 
-       y = "\n\nLog2(foldchange of biofilm formation)", 
-       title = "Biofilm formation\n")+
-  scale_y_continuous(limits = c(-5,5)) +
-  theme(axis.text = element_text(color = "Black", face = "bold"),
-        axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+ 
-  annotate(geom = "text", label = "Padj= 0.00002", x = 1, y = 2.9, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj= 4x10-15", x = 2, y = 4.7, family="sans", size = 2, fontface = 2)
-P2C
-
-#Plot Biofilm w other variables (FigS4C)
-
-PS4C = df.cv.all2[df.cv.all2$plot != "Plot1",] %>% ggplot(aes(x= Eff, y =est.))+
-  geom_point(size = 2)+
-  geom_errorbar(aes(ymin = lower, ymax = upper),width = 0.3)+
-  theme_bw(base_size = 8)+
-  facet_grid(plot~.)+
-  theme(strip.text.y = element_text(color="black", face="bold"))+
-  geom_hline(yintercept = 0, color = "Black", size = 0.6, alpha = 1)+
-  labs(x="", 
-       y = "\n\nLog2(foldchange of biofilm formation)", 
-       title = "Biofilm formation\n")+
-  scale_y_continuous(limits = c(-5,5)) +
-  theme(axis.text = element_text(color = "Black", face = "bold"),
-        axis.title = element_text(color = "Black", face = "bold"),
-        plot.title = element_text(color = "Black", face ="bold", hjust = 0.5))+ 
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+ 
-  annotate(geom = "text", label = "Padj= 0.002", x = 1, y = 3.3, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj= 0.0001", x = 2, y = 3.6, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj=0.008", x = 3, y = -4, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.007", x = 3, y = -4, family="sans", size = 2, fontface = 2)
 
 PS4C

@@ -1,14 +1,25 @@
 
 #Load dataframe with culture yield values
 data.omit  <- readRDS("Data/df.phenotypicdata.rds")
-str(data.omit)
 
-#remove XB.3-m due to contamination
-data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
+# Outlier removal
+test2 = data.omit[,c(1,5)]
+mod <- lm(k ~ ., data=test2)
+cooksd <- cooks.distance(mod)
 
-#Remove XB-3.m due to contamination
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+# Outlier removal by Car test
+car::outlierTest(mod)
+
+#Remove outlier
+data.omit2 <- data.omit[-c(16,22,40,70),] # large cook distance
+
+#MELM
 set.seed(41)
-lm.fit.k <- lme(k ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
+lm.fit.k <- lme(k ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit2)
 jakob.2 <- summary(lm.fit.k)
 jakob <- intervals(lm.fit.k)
 
@@ -39,39 +50,29 @@ df.k2$Eff <- rownames(df.k)
 df.k2$plot <- "Culture yield (variables)"
 names(df.k2)
 
-# Dataframe for linage:
-lm.fit.k.null <- lmer(k ~ Cult.bin*Col.bin + (1|Lineage), data=data.omit, REML=FALSE)
-lm.fit.k.model <- lm(k ~ Cult.bin*Col.bin , data=data.omit)
-linage <- anova(lm.fit.k.null, lm.fit.k.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "k"
-linage2$Eff <- "Linage"
-linage2$plot <- "Culture yield (variables)"
-
 # Unite the two data.frames 
-df.k.all <- rbind(dfx.k2, df.k2,linage2)
+df.k.all <- rbind(dfx.k2, df.k2)
 df.k.all$p.correct <- p.adjust(df.k.all$pvalue, method = "fdr")
 
 #Change Eff names
-rownames(df.k.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+rownames(df.k.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype")
 df.k.all$Eff = rownames(df.k.all)
-df.k.all$Eff <- factor(df.k.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
-df.k.all2 = df.k.all[df.k.all$Eff != "Lineage",]
+df.k.all$Eff <- factor(df.k.all$Eff, 
+                       levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype"))
 
-data.omit$Culture = as.character(data.omit$Culture)
-data.omit$Culture[data.omit$Culture=="Single"] <- "Mono-culture"
-data.omit$Culture[data.omit$Culture=="Coc"] <- "Co-culture"
-data.omit$Culture = as.factor(data.omit$Culture)
-str(data.omit)
-data.omit$Culture <- factor(data.omit$Culture, 
+data.omit2$Culture = as.character(data.omit2$Culture)
+data.omit2$Culture[data.omit2$Culture=="Single"] <- "Mono-culture"
+data.omit2$Culture[data.omit2$Culture=="Coc"] <- "Co-culture"
+data.omit2$Culture = as.factor(data.omit2$Culture)
+str(data.omit2)
+data.omit2$Culture <- factor(data.omit2$Culture, 
                             levels = c("Mono-culture", "Co-culture"))
 
 #Plot
 
-P2A <- df.k.all2[df.k.all2$plot != "Culture yield (variables)",] %>% 
+P2A <- df.k.all[df.k.all$plot != "Culture yield (variables)",] %>% 
   ggplot(aes(x= Eff, y =est.))+
-  geom_point(data = data.omit, aes(x = Culture, y = k),
+  geom_point(data = data.omit2, aes(x = Culture, y = k),
              alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
@@ -89,12 +90,12 @@ P2A <- df.k.all2[df.k.all2$plot != "Culture yield (variables)",] %>%
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = "white"))+ 
-  annotate(geom = "text", label = "Padj = 0.102", x = 1, y = 1, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj = 0.0001", x = 2, y = 1, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.175", x = 1, y = 1, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 1, family="sans", size = 2, fontface = 2)
 P2A
 
 # Plot culture yield other variables (figS4A)
-PS4A <- df.k.all2[df.k.all2$plot != "Culture yield",] %>% 
+PS4A <- df.k.all[df.k.all$plot != "Culture yield",] %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
@@ -113,7 +114,7 @@ PS4A <- df.k.all2[df.k.all2$plot != "Culture yield",] %>%
         panel.grid.minor = element_blank(),
         strip.text.y = element_blank(),
         strip.background = element_rect(fill = "white")) +
-  annotate(geom = "text", label = "Padj = 0.015", x = 1, y = 0.45, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj = 0.07", x = 2, y = 0.1, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj = 0.877", x = 3, y = 0.45, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.007", x = 1, y = 0.45, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj = 0.168", x = 2, y = 0.1, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj = 0.928", x = 3, y = 0.3, family="sans", size = 2, fontface = 2)
 PS4A

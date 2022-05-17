@@ -74,8 +74,28 @@ combined_ph = combined_ph[combined_ph$isolate != "lal",]
 # make binary for culture type and color
 combined_ph$Col.bin <- ifelse(combined_ph$color == "l",1,0)
 combined_ph$Cult.bin <- ifelse(combined_ph$type == "co",1,0) 
+
+# Average bioreps
+ave_combined_ph = combined_ph %>%
+    group_by(isolate, type, color, lineage, ID, Cult.bin, Col.bin) %>%
+    dplyr::summarise(mean_logfc_ph = mean(logfc_ph),
+                     sd_logfc_ph = sd(logfc_ph),
+                     counts = n())
+
+# Remove outlier
+mod <- lm(mean_logfc_ph ~ ., data=as.data.frame(ave_combined_ph[,8]))
+cooksd <- cooks.distance(mod)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+# Outlier removal by Car test
+car::outlierTest(mod)
+# No outlier
+
 set.seed(41)
-lm <- lme(logfc_ph ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=combined_ph)
+lm <- lme(mean_logfc_ph ~ Cult.bin*Col.bin, random = ~ 1|lineage, data=ave_combined_ph)
 lm.sum <- summary(lm)
 lm.intervals <- intervals(lm,which = "fixed")
 
@@ -93,53 +113,42 @@ df.ph.pcoc <- data.frame(glht.sum$test$pvalues)
 colnames(df.ph.pcoc) <- "pvalue"
 df.ph.pboth <- rbind(df.ph.psing,df.ph.pcoc)
 dfx.ph2 <- cbind(dfx.ph,df.ph.pboth)
-dfx.ph2$Var <- "ph"
+dfx.ph2$Var <- "Acidification (pH)"
 dfx.ph2$Eff <- c("Mono-culture", "Co-culture")
-dfx.ph2$plot <- "pH"
+dfx.ph2$plot <- "Acidification (pH)"
 
 # Make a summary dataframe for plots with Culture and Color effect
 df.ph <- data.frame(lm.intervals$fixed[-1, ])
 df.ph.p <- data.frame(lm.sum$tTable[-1,5])
 colnames(df.ph.p) <- "pvalue"
 df.ph2 <- cbind(df.ph,df.ph.p)
-df.ph2$Var <- "ph"
+df.ph2$Var <- "Acidification (pH)"
 df.ph2$Eff <- rownames(df.ph)
-df.ph2$plot <- "pH (variables)"
+df.ph2$plot <- "Acidification (variables)"
 names(df.ph2)
 
-# Dataframe for lineage 
-lm.fit.ph.null <- lmer(logfc_ph ~ Cult.bin*Col.bin + (1|lineage), data=combined_ph, REML=FALSE)
-lm.fit.ph.model <- lm(logfc_ph ~ Cult.bin*Col.bin , data=combined_ph)
-linage <- anova(lm.fit.ph.null, lm.fit.ph.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "ph"
-linage2$Eff <- "Linage"
-linage2$plot <- "pH (variables)"
-
 # Unite the two data.frames 
-df.ph.all <- rbind(dfx.ph2, df.ph2,linage2)
+df.ph.all <- rbind(dfx.ph2, df.ph2)
 
 # FDR on all p-values
 df.ph.all$p.correct <- p.adjust(df.ph.all$pvalue, method = "fdr")
 
 #Change Eff names
-rownames(df.ph.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+rownames(df.ph.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype")
 df.ph.all$Eff = rownames(df.ph.all)
-df.ph.all$Eff <- factor(df.ph.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage"))
-df.ph.all2 = df.ph.all[df.ph.all$Eff != "Lineage",]
+df.ph.all$Eff <- factor(df.ph.all$Eff, levels = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype"))
 
 # change variables 
-combined_ph$type = as.character(combined_ph$type)
-combined_ph$type[combined_ph$type=="mono"] <- "Mono-culture"
-combined_ph$type[combined_ph$type=="co"] <- "Co-culture"
-combined_ph$type = as.factor(combined_ph$type)
-str(combined_ph)
+ave_combined_ph$type = as.character(ave_combined_ph$type)
+ave_combined_ph$type[ave_combined_ph$type=="mono"] <- "Mono-culture"
+ave_combined_ph$type[ave_combined_ph$type=="co"] <- "Co-culture"
+ave_combined_ph$type = as.factor(ave_combined_ph$type)
+str(ave_combined_ph)
 
 #Figure
-P2D= df.ph.all2[df.ph.all2$plot != "pH (variables)",] %>% ggplot(aes(x= Eff, y =est.))+
+P2D= df.ph.all[df.ph.all$plot != "Acidification (variables)",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_point(data = combined_ph, aes(x = type, y = logfc_ph), 
+  geom_point(data = ave_combined_ph, aes(x = type, y = mean_logfc_ph), 
              alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
@@ -156,12 +165,12 @@ P2D= df.ph.all2[df.ph.all2$plot != "pH (variables)",] %>% ggplot(aes(x= Eff, y =
         panel.grid.minor = element_blank(),
         strip.text.y = element_blank(),
         strip.background = element_rect(fill = "white")) +
-  annotate(geom = "text", label = "Padj = 0.240", x = 1, y = 0.07, family="sans", size = 2, fontface = 2)+
-  annotate(geom = "text", label = "Padj = 0.041", x = 2, y = 0.07, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.393", x = 1, y = 0.07, family="sans", size = 2, fontface = 2)+
+  annotate(geom = "text", label = "Padj = 0.147", x = 2, y = 0.07, family="sans", size = 2, fontface = 2)
  P2D
 
  #Plot Biofilm w other variables (FigS4C)
-noave_2 = df.ph.all2[df.ph.all2$plot != "pH",] %>% ggplot(aes(x= Eff, y =est.))+
+noave_2 = df.ph.all[df.ph.all$plot != "Acidification (pH)",] %>% ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
@@ -178,9 +187,9 @@ noave_2 = df.ph.all2[df.ph.all2$plot != "pH",] %>% ggplot(aes(x= Eff, y =est.))+
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = "white")) +
   #coord_flip()+
-  annotate(geom = "text", label = "Padj = 0.005", x = 1, y = 0.08, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj= 0.895", x = 2, y = 0.035, family="sans", size = 2, fontface = 2) +
-  annotate(geom = "text", label = "Padj= 0.06", x = 3, y = -0.065, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.147", x = 1, y = 0.095, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj= 0.882", x = 2, y = 0.046, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj= 0.294", x = 3, y = -0.083, family="sans", size = 2, fontface = 2)
 noave_2
 
 #### grid.arrange ####

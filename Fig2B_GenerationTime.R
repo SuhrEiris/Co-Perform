@@ -1,11 +1,25 @@
 
 #Load dataframe with culture yield values
-data.omit  <- readRDS("Data/df.phenotypicdata.rds")
-data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
+data.omit <- readRDS("Data/df.phenotypicdata.rds")
+
+# Outlier removal
+test2 = data.omit[,c(1,6)]
+mod <- lm(t.gen ~ ., data=test2)
+cooksd <- cooks.distance(mod)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+# Outlier removal by Car test
+car::outlierTest(mod)
+
+#Remove outlier
+data.omit2 <- data.omit[-c(16,22,40,70),] # large cook distance
 
 ############  Data from generation time ######
 set.seed(41)
-lm.fit.t.gen <- lme(t.gen ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
+lm.fit.t.gen <- lme(t.gen ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit2)
 jakob.2 <- summary(lm.fit.t.gen)
 jakob <- intervals(lm.fit.t.gen)
 
@@ -36,40 +50,30 @@ df.t.gen2$Eff <- rownames(df.t.gen)
 df.t.gen2$plot <- "Generation time (variables)"
 names(df.t.gen2)
 
-# Dataframe for linage:
-lm.fit.t.gen.null <- lmer(t.gen ~ Cult.bin*Col.bin + (1|Lineage), data=data.omit, REML=FALSE)
-lm.fit.t.gen.model <- lm(t.gen ~ Culture*Color , data=data.omit)
-linage <- anova(lm.fit.t.gen.null, lm.fit.t.gen.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "t.gen"
-linage2$Eff <- "Linage"
-linage2$plot <- "Generation time (variables"
-
 # Unite the two data.frames 
-df.t.gen.all <- rbind(dfx.t.gen2, df.t.gen2,linage2)
+df.t.gen.all <- rbind(dfx.t.gen2, df.t.gen2)
 df.t.gen.all$p.correct <- p.adjust(df.t.gen.all$pvalue, method = "fdr")
 
 #Change names of Eff
-rownames(df.t.gen.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype", "Lineage")
+rownames(df.t.gen.all) = c("Mono-culture", "Co-culture", "Culture", "Morphotype", "Culture:Morphotype")
 df.t.gen.all$Eff = rownames(df.t.gen.all)
-df.t.gen.all$Eff <- factor(df.t.gen.all$Eff, levels = c("Mono-culture", "Co-culture","Culture","Morphotype", "Culture:Morphotype", "Lineage"))
-df.t.gen.all2 = df.t.gen.all[df.t.gen.all$Eff != "Lineage",]
+df.t.gen.all$Eff <- factor(df.t.gen.all$Eff, 
+                           levels = c("Mono-culture", "Co-culture","Culture","Morphotype", "Culture:Morphotype"))
 
-data.omit$Culture = as.character(data.omit$Culture)
-data.omit$Culture[data.omit$Culture=="Single"] <- "Mono-culture"
-data.omit$Culture[data.omit$Culture=="Coc"] <- "Co-culture"
-data.omit$Culture = as.factor(data.omit$Culture)
-str(data.omit)
-data.omit$Culture <- factor(data.omit$Culture, 
+data.omit2$Culture = as.character(data.omit2$Culture)
+data.omit2$Culture[data.omit2$Culture=="Single"] <- "Mono-culture"
+data.omit2$Culture[data.omit2$Culture=="Coc"] <- "Co-culture"
+data.omit2$Culture = as.factor(data.omit2$Culture)
+str(data.omit2)
+data.omit2$Culture <- factor(data.omit2$Culture, 
                             levels = c("Mono-culture", "Co-culture"))
 
 
 #Generation time plot with main variables (Fig2B)
-P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time (variables)",] %>% 
+P2B <- df.t.gen.all[df.t.gen.all$plot != "Generation time (variables)",] %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_point(data = data.omit, aes(x = Culture, y = t.gen),
+  geom_point(data = data.omit2, aes(x = Culture, y = t.gen),
              alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
@@ -88,12 +92,12 @@ P2B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time (variables)",] %>%
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = "white"))+
-  annotate(geom = "text", label = "Padj = 0.3", x = 1, y = 0.7, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj = 0.0004", x = 2, y = 0.7, family="sans", size = 2, fontface = 2)
+  annotate(geom = "text", label = "Padj = 0.138", x = 1, y = 0.7, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj = 0.0002", x = 2, y = 0.7, family="sans", size = 2, fontface = 2)
 P2B
 
 #Generation time plot with other variables (FigS4B)
-PS4B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time",] %>% 
+PS4B <- df.t.gen.all[df.t.gen.all$plot != "Generation time",] %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0)+
@@ -113,6 +117,6 @@ PS4B <- df.t.gen.all2[df.t.gen.all2$plot != "Generation time",] %>%
         strip.text.y = element_blank(),
         strip.background = element_rect(fill = "white")) +
   annotate(geom = "text", label = "Padj < 0.0001", x = 1, y = 0.5, family="sans", size = 2, fontface = 2) + 
-  annotate(geom = "text", label = "Padj = 0.0014", x = 2, y = 0.5, family="sans", size = 2, fontface = 2) +
+  annotate(geom = "text", label = "Padj = 0.0004", x = 2, y = 0.5, family="sans", size = 2, fontface = 2) +
   annotate(geom = "text", label = "Padj < 0.0001", x = 3, y = -0.6, family="sans", size = 2, fontface = 2)
 PS4B

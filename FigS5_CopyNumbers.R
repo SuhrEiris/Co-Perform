@@ -2,8 +2,23 @@
 #Load dataframe with culture yield values
 data.omit  <- readRDS("Data/df.phenotypicdata.rds")
 
-#remove XB.3-m due to contamination
-data.omit<-data.omit[!(data.omit$Sample=="XB.3-m"),]
+
+# Outlier removal
+test2 = data.omit[,c(1,8)]
+mod <- lm(copynumb ~ ., data=test2)
+cooksd <- cooks.distance(mod)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+# Outlier removal by Car test
+car::outlierTest(mod)
+
+#Remove outlier
+data.omit2 <- data.omit[-c(16,22,40,70),] # large cook distance
+
+#MELM
 
 lm.fit.copy <- lme(copynumb ~ Cult.bin*Col.bin, random = ~ 1|Lineage, data=data.omit)
 lm.fit.copy2 <- lm(copynumb ~ Cult.bin*Col.bin, data=data.omit)
@@ -38,21 +53,11 @@ df.copy2$Eff <- rownames(df.copy)
 df.copy2$plot <- "Plot2"
 names(df.copy2)
 
-# Dataframe for linage:
-lm.fit.copy.null <- lmer(copynumb ~ Cult.bin*Col.bin + (1|Lineage), data=data.omit, REML=FALSE)
-lm.fit.copy.model <- lm(copynumb ~ Cult.bin*Col.bin , data=data.omit)
-linage <- anova(lm.fit.copy.null, lm.fit.copy.model)
-linage2 <- as.data.frame(rbind(c(NA,NA,NA,linage$`Pr(>Chisq)`[2])))
-colnames(linage2) <- c("lower",  "est.",   "upper",  "pvalue")
-linage2$Var <- "copy"
-linage2$Eff <- "Linage"
-linage2$plot <- "Plot2"
-
 # Unite the two data.frames 
-df.copy.all <- rbind(dfx.copy2, df.copy2,linage2)
+df.copy.all <- rbind(dfx.copy2, df.copy2)
 df.copy.all$p.correct <- p.adjust(df.copy.all$pvalue, method = "fdr")
 
-df.copy.all$Eff <- factor(df.copy.all$Eff, levels = c("Single", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin", "Linage"))
+df.copy.all$Eff <- factor(df.copy.all$Eff, levels = c("Single", "CoCulture", "Cult.bin","Col.bin", "Cult.bin:Col.bin"))
 
 # 
 # p <- df.copy.all[df.copy.all$Eff != "Linage",] %>% ggplot(aes(x= Eff, y =est.))+
@@ -67,12 +72,12 @@ df.copy.all$Eff <- factor(df.copy.all$Eff, levels = c("Single", "CoCulture", "Cu
 
 #Figure S5
 
-data.omit$Culture = as.character(data.omit$Culture)
-data.omit$Culture[data.omit$Culture=="Single"] <- "Mono-culture"
-data.omit$Culture[data.omit$Culture=="Coc"] <- "Co-culture"
-data.omit$Culture = as.factor(data.omit$Culture)
-str(data.omit)
-data.omit$Culture <- factor(data.omit$Culture, 
+data.omit2$Culture = as.character(data.omit2$Culture)
+data.omit2$Culture[data.omit2$Culture=="Single"] <- "Mono-culture"
+data.omit2$Culture[data.omit2$Culture=="Coc"] <- "Co-culture"
+data.omit2$Culture = as.factor(data.omit2$Culture)
+str(data.omit2)
+data.omit2$Culture <- factor(data.omit2$Culture, 
                             levels = c("Mono-culture", "Co-culture"))
 
 dfx.copy2$Eff <- factor(dfx.copy2$Eff, levels = c("Mono-culture", "Co-culture"))
@@ -80,7 +85,7 @@ dfx.copy2$Eff <- factor(dfx.copy2$Eff, levels = c("Mono-culture", "Co-culture"))
 PS5 = dfx.copy2 %>% 
   ggplot(aes(x= Eff, y =est.))+
   geom_point(size = 2)+
-  geom_point(data = data.omit, aes(x = Culture, y =copynumb ),
+  geom_point(data = data.omit2, aes(x = Culture, y =copynumb ),
              alpha = 0.7, position = position_jitter(width = 0.1), color= "#798E87")+
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 0)+
   theme_bw(base_size = 8)+
@@ -96,7 +101,7 @@ PS5 = dfx.copy2 %>%
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = "white"))+ 
-  annotate(geom = "text", label = "Padj = 0.193", x = 1, y = 1.5, family="sans", size = 2, fontface = 2) + 
+  annotate(geom = "text", label = "Padj = 0.303", x = 1, y = 1.5, family="sans", size = 2, fontface = 2) + 
   annotate(geom = "text", label = "Padj < 0.0001", x = 2, y = 1.5, family="sans", size = 2, fontface = 2)
 PS5
 
